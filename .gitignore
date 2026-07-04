@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.pyi_cache/
+.pyi_appdata/
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+!WorldCupOverlay.spec
+
+# Runtime data
+.config/
+*.log
+*.lock
+*.pid
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store?
+ehthumbs.db
+Thumbs.db
+
+# Misc
+*.bak
+*.tmp
+
+# Old build artifacts (we keep the .spec for reproducibility)
+WorldCupOverlay.app/
