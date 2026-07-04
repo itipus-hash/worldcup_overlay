@@ -2854,6 +2854,10 @@ class WorldCupOverlay(QWidget):
         # Detect day rollover: switch to new today
         if self._last_known_today != today:
             self._last_known_today = today
+            # Invalidate the bulk-cache entry for the NEW today so the
+            # first refresh after rollover is a real network fetch,
+            # not a stale placeholder from yesterday.
+            self._bulk_cache.pop(today, None)
             # If we were viewing yesterday/older, jump back to today on rollover
             if self.current_date != today:
                 self.current_date = today
@@ -3073,13 +3077,28 @@ class WorldCupOverlay(QWidget):
         Debounce policy: only ignore rapid clicks that come within 2s of the
         last *successful* refresh trigger. If a click is debounced, we
         schedule a delayed retry so fast date switching still works.
+
+        Caching policy (revised after stale-data bug):
+        - "Today" (BJ today) → NEVER served from bulk cache; the user
+          wants live score updates for matches in progress, so we always
+          hit the API. Bulk cache for today is only used as a placeholder
+          before the first live fetch completes.
+        - Past dates → served from cache (matches are finished; no point
+          in re-fetching).
+        - Future dates → served from cache (22-day window pre-loaded on
+          startup; ESPN doesn't update future fixtures).
+        - On day rollover, the "today" cache entry is invalidated so the
+          first tick of the new day does a real network fetch.
         """
-        # Serve from the bulk cache when possible. This is the
-        # primary optimization: we already pulled a 22-day window
-        # on startup, so flipping between dates doesn't burn API
-        # quota. We only fall back to a per-date network fetch if
-        # the cache doesn't have this date yet.
-        if self.current_date in self._bulk_cache:
+        today = get_beijing_today()
+        is_today = (self.current_date == today)
+
+        # Future / past date: serve from cache.
+        # Today: only use cache if we have a recent placeholder AND the
+        # bulk fetch hasn't returned real data yet. Once we have a real
+        # cache entry, invalidate it on every refresh so the live fetch
+        # path runs (see "Live fetch" branch below).
+        if not is_today and self.current_date in self._bulk_cache:
             cached = self._bulk_cache[self.current_date]
             matches = cached[0] if isinstance(cached, tuple) else cached
             success = True
@@ -3089,24 +3108,21 @@ class WorldCupOverlay(QWidget):
         # If the bulk fetch is still running and we don't have this
         # date in cache yet, wait for it. Otherwise we'd race a
         # network fetch against the in-flight bulk and waste quota.
-        if self._bulk_fetcher and self._bulk_fetcher.isRunning():
+        if self._bulk_fetcher and self._bulk_fetcher.isRunning() and not is_today:
             self.status_bar.setText("正在预加载赛程数据...")
             return
 
-        # The cache is fully populated and this date is NOT in it.
-        # For a future date this means the World Cup has no matches
-        # scheduled on this BJ day (e.g. 7/9 is a rest day). For a
-        # past date it means the cache was populated and the day is
-        # empty. Either way, the right move is to render an empty
-        # list — don't burn API quota trying to re-fetch.
-        # We treat "no entry in cache" as authoritative "no matches
-        # scheduled" because the bulk fetch covered 22 days, which
-        # exceeds the World Cup's playable window.
-        today = get_beijing_today()
-        if compare_beijing_dates(self.current_date, today) != 0 and self._bulk_loaded:
-            # Empty matches list, but it's a definitive answer.
+        # Future date that's NOT in cache: the bulk fetch has finished
+        # and the date has no matches. Render an empty list.
+        if not is_today and self._bulk_loaded:
             self._on_data_ready([], self.current_date, True)
             return
+
+        # --- Live fetch path (always runs for "today") ---
+
+        # Invalidate the stale "today" entry so the new data replaces it.
+        if is_today and self.current_date in self._bulk_cache:
+            del self._bulk_cache[self.current_date]
 
         now = time.time()
         if now - self._last_refresh_time < 2:
