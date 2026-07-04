@@ -47,17 +47,18 @@ jobs:
           pyinstaller --noconfirm --clean WorldCupOverlay.spec
 
       - name: Rename exe for clarity
+        shell: pwsh
         run: |
-          cd dist
-          if exist WorldCupOverlay (
-            ren WorldCupOverlay WorldCupOverlay_win64
-          )
-          dir WorldCupOverlay_win64
+          Set-Location dist
+          if (Test-Path WorldCupOverlay) {
+            Rename-Item WorldCupOverlay WorldCupOverlay_win64
+          }
+          Get-ChildItem WorldCupOverlay_win64
 
       - name: Zip the build
         shell: pwsh
         run: |
-          cd dist
+          Set-Location dist
           if (Test-Path WorldCupOverlay_win64) {
             Compress-Archive -Path WorldCupOverlay_win64,../README.md -DestinationPath WorldCupOverlay_win64.zip
           } else {
