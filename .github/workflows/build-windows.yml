@@ -31,19 +31,21 @@ jobs:
         # We invoke the .spec directly. PyInstaller needs the icon in
         # .ico format on Windows, so we generate it from gear.png with
         # Pillow before invoking PyInstaller.
+        # We do the spec-patching and ICO generation in PowerShell
+        # to avoid bash ↔ Python heredoc quoting issues.
+        shell: pwsh
         run: |
+          # Generate gear.ico from gear.png
           python -c "from PIL import Image; im=Image.open('gear.png'); im.save('gear.ico', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])"
           # Patch the spec to point at gear.ico (if the spec still says gear.png / .icns)
-          python -c "
-          import re, os
-          spec = open('WorldCupOverlay.spec').read()
-          if os.path.exists('gear.ico'):
-              spec = re.sub(r\"icon='[^']*'\", \"icon='gear.ico'\", spec)
-              open('WorldCupOverlay.spec','w').write(spec)
-              print('spec updated to use gear.ico')
-          else:
-              print('gear.ico not present, using default icon')
-          "
+          $spec = Get-Content -Raw 'WorldCupOverlay.spec'
+          if (Test-Path 'gear.ico') {
+            $spec = $spec -replace "icon='[^']*'", "icon='gear.ico'"
+            Set-Content -Path 'WorldCupOverlay.spec' -Value $spec -NoNewline
+            Write-Host 'spec updated to use gear.ico'
+          } else {
+            Write-Host 'gear.ico not present, using default icon'
+          }
           pyinstaller --noconfirm --clean WorldCupOverlay.spec
 
       - name: Rename exe for clarity
