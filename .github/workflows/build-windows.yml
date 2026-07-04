@@ -9,9 +9,6 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: worldcup_overlay
 
     steps:
       - name: Checkout source
@@ -22,28 +19,23 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: worldcup_overlay/requirements.txt
+          cache-dependency-path: requirements.txt
 
       - name: Install PyInstaller + dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller==6.10.0
-          pip install PyQt5==5.15.11 requests==2.32.3
+          pip install PyQt5==5.15.11 requests==2.32.3 pillow
 
       - name: Build the Windows bundle
         # We invoke the .spec directly. PyInstaller needs the icon in
         # .ico format on Windows, so we generate it from gear.png with
-        # ImageMagick if available, otherwise fall back to the default
-        # PyInstaller icon.
+        # Pillow before invoking PyInstaller.
         run: |
-          # Try to convert PNG to ICO with Pillow (lightweight, often
-          # preinstalled on the runner via setup-python image).
-          python -c "from PIL import Image; im=Image.open('gear.png'); im.save('gear.ico', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])" \
-            && icon_line="icon='gear.ico'" \
-            || icon_line="# icon='gear.png'  # Pillow missing; use default"
-          # Patch the spec to point at gear.ico if we have one.
+          python -c "from PIL import Image; im=Image.open('gear.png'); im.save('gear.ico', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])"
+          # Patch the spec to point at gear.ico (if the spec still says gear.png / .icns)
           python -c "
-          import re, sys, os
+          import re, os
           spec = open('WorldCupOverlay.spec').read()
           if os.path.exists('gear.ico'):
               spec = re.sub(r\"icon='[^']*'\", \"icon='gear.ico'\", spec)
@@ -56,24 +48,29 @@ jobs:
 
       - name: Rename exe for clarity
         run: |
-          # The .spec outputs a single-file exe inside dist/WorldCupOverlay/.
-          # Wrap it in a versioned folder for the artifact.
           cd dist
-          mv WorldCupOverlay WorldCupOverlay_win64
-          ls -la WorldCupOverlay_win64
+          if exist WorldCupOverlay (
+            ren WorldCupOverlay WorldCupOverlay_win64
+          )
+          dir WorldCupOverlay_win64
 
       - name: Zip the build
+        shell: pwsh
         run: |
           cd dist
-          7z a WorldCupOverlay_win64.zip WorldCupOverlay_win64 README.md 2>/dev/null \
-            || powershell Compress-Archive -Path WorldCupOverlay_win64,README.md -DestinationPath WorldCupOverlay_win64.zip
-          ls -la WorldCupOverlay_win64.zip
+          if (Test-Path WorldCupOverlay_win64) {
+            Compress-Archive -Path WorldCupOverlay_win64,../README.md -DestinationPath WorldCupOverlay_win64.zip
+          } else {
+            Write-Error "dist/WorldCupOverlay_win64 not found"
+            exit 1
+          }
+          Get-Item WorldCupOverlay_win64.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: WorldCupOverlay-win64
-          path: worldcup_overlay/dist/WorldCupOverlay_win64.zip
+          path: dist/WorldCupOverlay_win64.zip
           if-no-files-found: error
           retention-days: 30
 
