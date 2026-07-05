@@ -14,7 +14,7 @@ import time
 import subprocess
 import requests
 from datetime import datetime, timezone, timedelta
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Optional
 
 from PyQt5.QtWidgets import (
@@ -81,6 +81,19 @@ os.makedirs(CONFIG_DIR, exist_ok=True)
 FLAG_CACHE_DIR = os.path.join(CONFIG_DIR, "flags")
 SETTINGS_PATH = os.path.join(CONFIG_DIR, "settings.json")
 LOCK_PATH = os.path.join(CONFIG_DIR, ".lock")
+# Persistent on-disk cache of the bulk 22-day window. When the user
+# reopens the app within the same day, we can serve today's view
+# from this snapshot before the next bulk fetch returns — no
+# "no matches" flash, no waiting for ESPN.
+BULK_CACHE_PATH = os.path.join(CONFIG_DIR, "bulk_cache.json")
+# How long a stored bulk cache is considered fresh enough to use
+# as a "first paint" source. After this many seconds we still
+# load it (to avoid the empty flash) but the next tick will
+# re-fetch from the network. 4 hours is a reasonable window:
+# long enough to cover the user closing the app for lunch and
+# reopening, short enough that a stale snapshot is unlikely to
+# be misleading.
+BULK_CACHE_TTL_SECS = 4 * 60 * 60
 
 # App dimensions
 WINDOW_WIDTH = 478
@@ -2476,6 +2489,21 @@ class WorldCupOverlay(QWidget):
         # The bulk fetcher populates self._bulk_cache with ~22 days
         # of data; the initial UI fetch then serves today's view
         # from that cache without burning extra API quota.
+        #
+        # First, try to load a previously-persisted bulk cache
+        # from disk. If one exists and is fresh (<4h), populate
+        # self._bulk_cache BEFORE the network call, so the first
+        # 300ms _refresh_data() can serve today's view from cache
+        # instantly. Without this, every app launch shows a
+        # "no matches" flash for ~5-10s while waiting for ESPN.
+        cache_loaded = self._load_bulk_cache()
+        if cache_loaded:
+            # If the user's last-seen view was today, render from
+            # cache right now. _refresh_data will later overwrite
+            # this with the network fetch, but the cache render
+            # gives the user a sub-second first paint.
+            self._bulk_loaded = True
+            self._refresh_data()
         self._start_bulk_fetch()
         QTimer.singleShot(300, self._refresh_data)
 
@@ -2499,6 +2527,71 @@ class WorldCupOverlay(QWidget):
                     self._pushplus_token = data.get("pushplus_token", "")
                     self._pushplus_on_start = data.get("pushplus_on_start", False)
                     self._pushplus_on_goal = data.get("pushplus_on_goal", False)
+        except Exception:
+            pass
+
+    def _load_bulk_cache(self):
+        """Load the bulk 22-day window from disk so a fresh app
+        start can show the user's last-seen data instantly, before
+        the network fetch returns. Returns True if a usable cache
+        was loaded.
+
+        Each entry is stored as a list of plain dicts (Match
+        fields). We rehydrate them into Match objects on load.
+        We only honor the on-disk cache if it's younger than
+        BULK_CACHE_TTL_SECS — older snapshots get discarded and
+        we wait for the network.
+        """
+        try:
+            if not os.path.exists(BULK_CACHE_PATH):
+                return False
+            with open(BULK_CACHE_PATH, "r") as f:
+                payload = json.load(f)
+            saved_at = float(payload.get("saved_at", 0))
+            age = time.time() - saved_at
+            if age > BULK_CACHE_TTL_SECS:
+                return False
+            by_date = payload.get("by_date", {})
+            if not by_date:
+                return False
+            # Rehydrate Match objects. We use the existing
+            # Match dataclass directly — every field it stores
+            # is JSON-serializable (str / int / bool).
+            for bj_date, match_dicts in by_date.items():
+                matches = []
+                for d in match_dicts:
+                    try:
+                        matches.append(Match(**d))
+                    except Exception:
+                        # Field shape changed between versions —
+                        # skip the broken entry but keep the rest.
+                        continue
+                if matches:
+                    self._bulk_cache[bj_date] = (matches, saved_at, True)
+            return bool(self._bulk_cache)
+        except Exception:
+            return False
+
+    def _save_bulk_cache(self):
+        """Persist the current bulk cache to disk. Called after
+        every successful bulk fetch so the next app start has
+        fresh data to show immediately."""
+        try:
+            by_date = {}
+            for bj_date, entry in self._bulk_cache.items():
+                matches = entry[0] if isinstance(entry, tuple) else entry
+                by_date[bj_date] = [asdict(m) for m in matches]
+            payload = {
+                "saved_at": time.time(),
+                "by_date": by_date,
+            }
+            # Atomic write: write to .tmp, then os.replace. Prevents
+            # the file from being half-written if the process is
+            # killed mid-save.
+            tmp_path = BULK_CACHE_PATH + ".tmp"
+            with open(tmp_path, "w") as f:
+                json.dump(payload, f, ensure_ascii=False)
+            os.replace(tmp_path, BULK_CACHE_PATH)
         except Exception:
             pass
 
@@ -3238,6 +3331,9 @@ class WorldCupOverlay(QWidget):
         the network. This is intentional — it gives the user
         instant feedback (no spinner) and saves the per-minute
         API budget for the first refresh cycle.
+
+        Also persists the fresh cache to disk so the next app
+        launch can serve today's view without waiting for ESPN.
         """
         for bj_date, matches in by_date.items():
             # Enrich ET scores for AET matches (same as the
@@ -3245,6 +3341,10 @@ class WorldCupOverlay(QWidget):
             self._enrich_matches_with_et_scores(matches)
             self._bulk_cache[bj_date] = (matches, time.time(), True)
         self._bulk_loaded = True
+        # Persist the freshly-loaded cache for next launch.
+        # This is what makes reopening the app instant — see
+        # _load_bulk_cache in __init__.
+        self._save_bulk_cache()
         # If the user is currently viewing a date that the cache
         # now covers, refresh the UI from cache.
         if self.current_date in by_date or (
@@ -3289,6 +3389,11 @@ class WorldCupOverlay(QWidget):
             # the dock. Viewport repaint is enough to flush card content.
             self.scroll_area.setVisible(True)
             self.scroll_area.viewport().update()
+            # Also persist today's snapshot so a quick app restart
+            # can render this exact view before the next network
+            # call returns. Cheap, and prevents the "no matches"
+            # flash on relaunch.
+            self._save_bulk_cache()
         elif success:
             # API succeeded but no matches for this date — clear old data
             self.matches = []
