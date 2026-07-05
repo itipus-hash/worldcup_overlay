@@ -3107,16 +3107,25 @@ class WorldCupOverlay(QWidget):
         is_today = (self.current_date == today)
 
         # Future / past date: serve from cache.
-        # Today: only use cache if we have a recent placeholder AND the
-        # bulk fetch hasn't returned real data yet. Once we have a real
-        # cache entry, invalidate it on every refresh so the live fetch
-        # path runs (see "Live fetch" branch below).
-        if not is_today and self.current_date in self._bulk_cache:
+        # Today: only use cache if there's a real, recent entry AND
+        # there are no live matches in progress. Live matches need
+        # a real network fetch every tick (scores change). For
+        # finished or upcoming-only days, the cached snapshot is
+        # just as good as a fresh fetch — scores don't change after
+        # Full Time, and ESPN doesn't update scheduled matches
+        # until ~10 min before kickoff.
+        if self.current_date in self._bulk_cache:
             cached = self._bulk_cache[self.current_date]
             matches = cached[0] if isinstance(cached, tuple) else cached
-            success = True
-            self._on_data_ready(matches, self.current_date, success)
-            return
+            has_live = any(m.status in ("1h", "2h", "ht", "et", "pen")
+                           for m in matches)
+            if not is_today or not has_live:
+                # Future/past: always cache. Today with no live
+                # match: cache too — saves a network call every
+                # 30s for a screen that wouldn't change anyway.
+                success = True
+                self._on_data_ready(matches, self.current_date, success)
+                return
 
         # If the bulk fetch is still running and we don't have this
         # date in cache yet, wait for it. Otherwise we'd race a
@@ -3131,7 +3140,7 @@ class WorldCupOverlay(QWidget):
             self._on_data_ready([], self.current_date, True)
             return
 
-        # --- Live fetch path (always runs for "today") ---
+        # --- Live fetch path (today with at least one live match) ---
 
         # Invalidate the stale "today" entry so the new data replaces it.
         if is_today and self.current_date in self._bulk_cache:
