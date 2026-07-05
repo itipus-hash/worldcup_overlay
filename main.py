@@ -2542,6 +2542,15 @@ class WorldCupOverlay(QWidget):
         # overlay updates visually but never activates itself.
         self.setAttribute(Qt.WA_ShowWithoutActivating, True)
 
+        # macOS-only: this attribute prevents the window from being
+        # auto-promoted to the front when it would otherwise be obscured.
+        # Without it, every refresh tick (which calls update()/repaint()
+        # on the viewport) can briefly pop the window to the front,
+        # contradicting the user's "hide from dock" intent. NSWindow's
+        # `level` is not affected — pinning still works.
+        if sys.platform == "darwin":
+            self.setAttribute(Qt.WA_MacAlwaysShowToolWindow, True)
+
         # Restore position or default to top-right
         if self._saved_window_pos:
             self.move(self._saved_window_pos[0], self._saved_window_pos[1])
@@ -3254,17 +3263,18 @@ class WorldCupOverlay(QWidget):
             self._bulk_cache[date_str] = (matches, time.time(), True)
             self._rebuild_match_cards()
             self._update_status()
-            # Force complete UI refresh — fixes blank cards after auto-refresh
+            # Force a viewport repaint so cards flush. We deliberately
+            # do NOT call self.repaint() / self.update() at the window
+            # level — those can briefly take focus and cause the
+            # overlay to "pop to foreground" when the user hid it on
+            # the dock. Viewport repaint is enough to flush card content.
             self.scroll_area.setVisible(True)
             self.scroll_area.viewport().update()
-            self.scroll_area.repaint()
-            self.repaint()
         elif success:
             # API succeeded but no matches for this date — clear old data
             self.matches = []
             self._rebuild_match_cards()
             self._update_status()
-            self.update()
         elif not success and self._retry_count < self._max_retries:
             self._retry_count += 1
             # If we already have matches on screen, the failure is
@@ -3699,6 +3709,11 @@ class WorldCupOverlay(QWidget):
         self.matches_layout.addStretch()
 
         # Force scroll area viewport to repaint (fixes blank screen after refresh)
+        # We deliberately do NOT call self.repaint() / self.update() at the
+        # window level — those go through the window manager and can briefly
+        # take focus on Windows / macOS, causing the overlay to "pop to
+        # foreground" when the user hid it on the dock. The viewport
+        # repaint below is enough to flush card content.
         self.scroll_area.viewport().update()
 
         # Process pending layout/paint events immediately so cards render
