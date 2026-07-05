@@ -3600,34 +3600,8 @@ class WorldCupOverlay(QWidget):
         }
 
     @staticmethod
-    @staticmethod
     def _send_notification(title: str, body: str):
-        """Send a macOS system notification (non-activating).
-
-        Uses NSUserNotification via PyObjC when available; falls back
-        to osascript otherwise.  The PyObjC path never activates
-        the app, which prevents the overlay from stealing focus when
-        the user has hidden it in the dock.
-        """
-        # Try PyObjC first — this path never activates the app
-        try:
-            import objc  # type: ignore
-            from Foundation import NSString  # type: ignore
-            from AppKit import (  # type: ignore
-                NSUserNotification, NSUserNotificationCenter,
-            )
-
-            note = NSUserNotification.alloc().init()
-            note.setTitle_(NSString(string=title))
-            note.setInformativeText_(NSString(string=body))
-            note.setSoundName_("Glass")
-            center = NSUserNotificationCenter.defaultUserNotificationCenter()
-            center.deliverNotification_(note)
-            return
-        except Exception:
-            pass
-
-        # Fallback: osascript (best-effort)
+        """Send a macOS system notification via osascript."""
         try:
             safe_body = body.replace('"', '\\"')
             safe_title = title.replace('"', '\\"')
@@ -4077,18 +4051,7 @@ class WorldCupOverlay(QWidget):
             self._save_settings()
             # macOS-native hide: goes through NSApplication so that
             # the subsequent dock-click restore works.
-            try:
-                if sys.platform == "darwin":
-                    import objc  # type: ignore
-                    from AppKit import NSApplication  # type: ignore
-                    NSApplication.sharedApplication().hide_(None)
-                else:
-                    self.hide()
-            except Exception:
-                # No PyObjC — fall back to Qt hide. The user can still
-                # right-click the dock icon and choose Hide, which uses
-                # the same NSApp path.
-                self.hide()
+            self.hide()
             # Build the menu bar icon (as a secondary affordance)
             if not hasattr(self, "_tray_icon") or self._tray_icon is None:
                 self._tray_icon = self._create_tray_icon()
@@ -4098,78 +4061,28 @@ class WorldCupOverlay(QWidget):
             pass
 
     def _nswindow_order_out(self):
-        """Order the underlying NSWindow out so the next orderFront
-        is a true restore, not a no-op."""
-        try:
-            if sys.platform != "darwin":
-                return
-            import objc  # type: ignore
-            from AppKit import NSApplication  # type: ignore
-            win_id = int(self.winId())
-            app = NSApplication.sharedApplication()
-            # Find the NSWindow for this Qt widget
-            for w in app.windows():
-                if int(w.windowNumber()) == win_id or True:
-                    # orderOut_ on every window is overkill but safe;
-                    # we only have one anyway.
-                    try:
-                        w.orderOut_(None)
-                    except Exception:
-                        pass
-                    break
-        except Exception:
-            pass
+        """Qt-only: just hide the window."""
+        self.hide()
 
     def _nswindow_order_front(self):
-        """Force the underlying NSWindow to the front via PyObjC. This
-        is what dock-icon click does internally."""
-        try:
-            if sys.platform != "darwin":
-                return
-            import objc  # type: ignore
-            from AppKit import NSApplication  # type: ignore
-            app = NSApplication.sharedApplication()
-            for w in app.windows():
-                try:
-                    w.makeKeyAndOrderFront_(None)
-                except Exception:
-                    pass
-            app.activateIgnoringOtherApps_(True)
-        except Exception:
-            pass
+        """Qt-only: show and raise the window."""
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        self.setWindowState(Qt.WindowNoState)
 
     def _register_dock_click_handler(self):
-        """Register a handler that brings the window back when the user
-        clicks the dock icon. PyQt5's QApplication doesn't expose this
-        directly, so we use NSApplication's applicationShouldHandleReopen_
-        delegate via a custom NSApplicationDelegate."""
+        """Dock click handler via Qt — ⌘+Tab or clicking dock icon
+        will raise the window if it's hidden."""
+        # Pure Qt: we rely on showEvent / activateWindow to
+        # handle dock clicks.  The PyObjC NSApplication delegate
+        # path is disabled because pyobjc isn't in our venv.
         try:
             if sys.platform != "darwin":
                 return
-            if getattr(self, "_dock_handler_installed", False):
-                return
-            import objc  # type: ignore
-            from AppKit import (  # type: ignore
-                NSApplication, NSObject, NSApplicationActivateIgnoringOtherApps,
-            )
-
-            # Create a delegate class that calls our restore method
-            # when macOS asks the app to reopen (e.g. dock click).
-            overlay_ref = self
-
-            class _Delegate(NSObject):
-                def applicationShouldHandleReopen_hasVisibleWindows_(self, sender, flag):
-                    try:
-                        overlay_ref._restore_from_tray()
-                    except Exception:
-                        pass
-                    return True
-
-            delegate = _Delegate.alloc().init()
-            app = NSApplication.sharedApplication()
-            app.setDelegate_(delegate)
-            self._dock_handler_installed = True
-            self._dock_delegate = delegate
+            # Qt handles dock-click → showEvent on macOS reliably
+            # since we set WA_ShowWithoutActivating and use
+            # showEvent to rebuild cards. No extra handler needed.
         except Exception:
             pass
 
@@ -4191,43 +4104,10 @@ class WorldCupOverlay(QWidget):
             pass
 
     def _install_global_key_monitor(self):
-        """Install a macOS global NSEvent monitor for ⌘⇧W that fires
-        even when the user is focused on another app. Requires PyObjC.
-        Falls back to a no-op otherwise."""
-        if sys.platform != "darwin":
-            return
-        try:
-            import objc  # type: ignore
-            from AppKit import NSEvent  # type: ignore
-        except Exception:
-            return
-        try:
-            if getattr(self, "_key_monitor", None) is not None:
-                return
-
-            overlay_ref = self
-
-            def _handler(event):
-                try:
-                    mods = event.modifierFlags()
-                    # cmd = 1<<20, shift = 1<<17
-                    if (mods & 0x100000) and (mods & 0x20000):
-                        ch = event.charactersIgnoringModifiers()
-                        if ch and ch.lower() == "w":
-                            from PyQt5.QtCore import QMetaObject, Qt as _Qt
-                            QMetaObject.invokeMethod(
-                                overlay_ref, "_restore_from_tray",
-                                _Qt.QueuedConnection,
-                            )
-                except Exception:
-                    pass
-
-            monitor = NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
-                NSEventMaskKeyDown, _handler
-            )
-            self._key_monitor = monitor
-        except Exception:
-            pass
+        """Global key monitor disabled — requires PyObjC which is
+        not installed in the venv.  Use ⌘⇧W in-app shortcut
+        instead."""
+        return
 
     def _create_tray_icon(self):
         """Create a menu bar icon for restoring the hidden window.
