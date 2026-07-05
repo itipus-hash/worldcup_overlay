@@ -2995,6 +2995,12 @@ class WorldCupOverlay(QWidget):
             # first refresh after rollover is a real network fetch,
             # not a stale placeholder from yesterday.
             self._bulk_cache.pop(today, None)
+            # Clear previous-match state so cross-day match starts are
+            # detected. Without this, _prev_matches_state holds yesterday's
+            # IDs; new today matches have prev=None → notification check
+            # skips them → no "比赛开始" push.
+            self._prev_matches_state = {}
+            self._match_goal_state = {}
             # If we were viewing yesterday/older, jump back to today on rollover
             if self.current_date != today:
                 self.current_date = today
@@ -3233,25 +3239,30 @@ class WorldCupOverlay(QWidget):
         is_today = (self.current_date == today)
 
         # Future / past date: serve from cache.
-        # Today: only use cache if there's a real, recent entry AND
-        # there are no live matches in progress. Live matches need
-        # a real network fetch every tick (scores change). For
-        # finished or upcoming-only days, the cached snapshot is
-        # just as good as a fresh fetch — scores don't change after
-        # Full Time, and ESPN doesn't update scheduled matches
-        # until ~10 min before kickoff.
+        # Today: use cache if there's a real, recent entry AND no live
+        # matches are in progress — BUT force a network refresh if the
+        # cached snapshot is older than CACHE_STALE_SECS. This prevents
+        # the "app shows stale data all day because it never re-fetches"
+        # bug where bulk-cache populates once and then the timer shortcut
+        # serves that same snapshot forever.
         if self.current_date in self._bulk_cache:
             cached = self._bulk_cache[self.current_date]
             matches = cached[0] if isinstance(cached, tuple) else cached
             has_live = any(m.status in ("1h", "2h", "ht", "et", "pen")
                            for m in matches)
-            if not is_today or not has_live:
-                # Future/past: always cache. Today with no live
-                # match: cache too — saves a network call every
-                # 30s for a screen that wouldn't change anyway.
+            # For future/past dates, always trust cache.
+            # For today with no live match: only trust cache if fresh.
+            if not is_today:
                 success = True
                 self._on_data_ready(matches, self.current_date, success)
                 return
+            if not has_live:
+                cache_age = time.time() - (cached[1] if isinstance(cached, tuple) else 0)
+                if cache_age < 900:   # 15 minutes — ESPN rarely updates >15min before kickoff
+                    success = True
+                    self._on_data_ready(matches, self.current_date, success)
+                    return
+                # Cache stale (>15min) → fall through to live fetch below
 
         # If the bulk fetch is still running and we don't have this
         # date in cache yet, wait for it. Otherwise we'd race a
