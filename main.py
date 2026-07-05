@@ -3599,16 +3599,33 @@ class WorldCupOverlay(QWidget):
             for m in new_matches
         }
 
-    @staticmethod
-    def _send_notification(title: str, body: str):
-        """Send a macOS system notification via osascript."""
+    def _send_notification(self, title: str, body: str):
+        """Send a macOS system notification via osascript.
+        Uses a temp file to avoid shell-escaping issues with Chinese/emoji."""
+        import tempfile
         try:
-            safe_body = body.replace('"', '\\"')
-            safe_title = title.replace('"', '\\"')
-            subprocess.Popen([
-                "osascript", "-e",
-                f'display notification "{safe_body}" with title "{safe_title}" sound name "Glass"'
-            ])
+            script = (
+                'display notification "' +
+                body.replace('\\', '\\\\').replace('"', '\\"') +
+                '" with title "' +
+                title.replace('\\', '\\\\').replace('"', '\\"') +
+                '" sound name "Glass"'
+            )
+            with tempfile.NamedTemporaryFile(
+                mode='w', suffix='.applescript', delete=False
+            ) as f:
+                f.write(script)
+                tmp_path = f.name
+            subprocess.Popen(["osascript", tmp_path],
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
+            # Clean up temp file after a delay
+            def _cleanup():
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+            QTimer.singleShot(5000, _cleanup)
         except Exception:
             pass
 
