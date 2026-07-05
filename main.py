@@ -427,12 +427,15 @@ class WorldCupAPI:
         if now < self._rate_limited_until:
             return False
         self._request_times = [t for t in self._request_times if now - t < 60]
-        # Conservative cap: 2 req/min per IP, well under ESPN's threshold.
-        # One refresh today pulls (today + yesterday) = 2 calls, then we
-        # wait 60s for the next refresh. For past/future dates there's
-        # 1 call per refresh. This is the lowest rate that still
-        # gives the user a real-time feel.
-        return len(self._request_times) < 2
+        # Conservative cap: ESPN rate-limits aggressively; we keep 4
+        # req/min per IP as the soft cap, well under ESPN's threshold.
+        # One refresh today pulls (today + 1 day window) = 1 call
+        # (single range request), plus 1 call every 60s for live
+        # updates. For past/future dates there's 1 call per refresh.
+        # The previous cap of 2/min was too tight — once the bulk
+        # startup fetch consumed 1, the user couldn't even refresh
+        # for 60s. 4/min gives us the same protection with headroom.
+        return len(self._request_times) < 4
 
     def force_allow(self):
         """Clear all recent request timestamps so the next call is
@@ -3133,6 +3136,29 @@ class WorldCupOverlay(QWidget):
         # Invalidate the stale "today" entry so the new data replaces it.
         if is_today and self.current_date in self._bulk_cache:
             del self._bulk_cache[self.current_date]
+
+        # If the API rate limit is in effect, do NOT call the network
+        # at all — just keep the current screen state and tell the
+        # user we're waiting. The previous behaviour silently
+        # produced an empty matches list (rate-limited fetch returns
+        # []), which got fed to _on_data_ready as (matches=[],
+        # success=False), which then ran "empty success → clear
+        # matches → 该日期没有比赛" — overwriting perfectly good
+        # data with an empty-state card. That was the bug where the
+        # overlay would say "该日期没有比赛" 60s after showing real
+        # matches on first launch.
+        if not self.api._can_make_request():
+            wait_secs = max(1, int(self.api._rate_limited_until - time.time()) + 1)
+            if self.matches:
+                # Keep the cards on screen. Just note the wait.
+                self.status_bar.setText(
+                    f"⏳ API 限流中，{wait_secs}秒后自动恢复 · 当前数据 {datetime.now(BEIJING_TZ).strftime('%H:%M:%S')}"
+                )
+            else:
+                self.status_bar.setText(
+                    f"⏳ API 限流中，{wait_secs}秒后首次拉取 · {datetime.now(BEIJING_TZ).strftime('%H:%M:%S')}"
+                )
+            return
 
         now = time.time()
         if now - self._last_refresh_time < 2:
