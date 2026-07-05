@@ -510,6 +510,8 @@ class WorldCupAPI:
             )
             if resp.status_code == 200:
                 self._record_success()
+                # See _fetch_for_date_range for why this flag matters.
+                self._cache_fetched = True
                 return resp.json().get("events", []) or []
             elif resp.status_code in (429, 503):
                 retry_after = None
@@ -541,6 +543,14 @@ class WorldCupAPI:
             )
             if resp.status_code == 200:
                 self._record_success()
+                # Mark the cache as valid — same role as _fetch_today
+                # plays. Without this, fetch_matches_by_beijing_date
+                # (which is the path used by today's live refresh) would
+                # report api_success=False even when the request
+                # returned a perfectly good 200 response, which made
+                # the overlay display "加载失败" while matches were
+                # actually loaded fine.
+                self._cache_fetched = True
                 return resp.json().get("events", []) or []
             elif resp.status_code in (429, 503):
                 retry_after = None
@@ -3222,13 +3232,35 @@ class WorldCupOverlay(QWidget):
             self.update()
         elif not success and self._retry_count < self._max_retries:
             self._retry_count += 1
-            self.status_bar.setText(f"加载失败，5秒后第{self._retry_count}次重试...")
+            # If we already have matches on screen, the failure is
+            # purely transient (rate limit / 5xx). Don't show a
+            # scary "加载失败" — instead, just kick off a quiet
+            # retry. Only show the warning when there's nothing on
+            # screen yet.
+            if self.matches:
+                self.status_bar.setText(
+                    f"⏳ 等待API恢复，第{self._retry_count}次重试..."
+                )
+            else:
+                self.status_bar.setText(
+                    f"加载失败，5秒后第{self._retry_count}次重试..."
+                )
             QTimer.singleShot(5000, self._retry_fetch)
         elif not success:
-            self.status_bar.setText("加载失败，请检查网络后重试")
+            if self.matches:
+                # Don't overwrite a working UI with a permanent
+                # error message — the cached data is still on screen.
+                self._update_status()
+            else:
+                self.status_bar.setText("加载失败，请检查网络后重试")
 
     def _retry_fetch(self):
-        self.api._cache_fetched = False
+        # Force-bypass the rate limit window. The user just clicked
+        # refresh or hit a tick; they want a real network fetch, not
+        # the cached answer. ESPN allows many reqs, our 2/min cap is
+        # a courtesy, not a hard limit.
+        self.api.force_allow()
+        self.api._rate_limited_until = 0
         self._fetch_worker = None  # clear to allow new fetch
         self._retry_count = 0
         self._refresh_data()
