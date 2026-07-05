@@ -3421,7 +3421,7 @@ class WorldCupOverlay(QWidget):
                         ):
                             self._send_notification(
                                 f"⚽ 进行中 {m.home_team} {m.home_score}-{m.away_score} {m.away_team}",
-                                f"{m.home_team} vs {m.away_team} · 第{m.clock_display or '?'}分钟"
+                                f"{m.home_team} vs {m.away_team} · 第{m.minute or '?'}分钟"
                             )
                             if self._pushplus_on_goal:
                                 title, content = self._format_match_push(m, "live_catchup")
@@ -3675,7 +3675,7 @@ class WorldCupOverlay(QWidget):
             content = (
                 f"{m.home_team} vs {m.away_team}\n"
                 f"当前比分：{m.home_score} - {m.away_score}\n"
-                f"第{m.clock_display or '?'}分钟 · 比赛进行中 🏟"
+                f"第{m.minute or '?'}分钟 · 比赛进行中 🏟"
             )
         else:  # score_change
             # Title reflects whether it's a goal, a correction, or both

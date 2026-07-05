@@ -33,9 +33,25 @@ fi
 
 echo "📦 Python: $PYTHON ($($PYTHON --version 2>&1))"
 
-# Step 2: Create virtual environment (if not exists)
+# Step 2: Create / verify virtual environment
+# If venv exists but its Python is the wrong version, recreate it.
+if [ -d "$VENV_DIR" ]; then
+    VENV_PYTHON="$VENV_DIR/bin/python3"
+    if [ -x "$VENV_PYTHON" ]; then
+        VENV_VER=$("$VENV_PYTHON" --version 2>&1)
+        EXPECTED_VER=$("$PYTHON" --version 2>&1)
+        if [ "$VENV_VER" != "$EXPECTED_VER" ]; then
+            echo "⚠️  venv Python ($VENV_VER) != expected ($EXPECTED_VER), recreating..."
+            rm -rf "$VENV_DIR"
+        fi
+    else
+        echo "⚠️  venv Python not found, recreating..."
+        rm -rf "$VENV_DIR"
+    fi
+fi
+
 if [ ! -d "$VENV_DIR" ]; then
-    echo "🔧 创建虚拟环境..."
+    echo "🔧 创建虚拟环境 (使用 $($PYTHON --version 2>&1))..."
     "$PYTHON" -m venv "$VENV_DIR"
 fi
 
