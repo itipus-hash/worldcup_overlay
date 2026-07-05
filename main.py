@@ -3401,9 +3401,31 @@ class WorldCupOverlay(QWidget):
             self._retry_count = 0
 
         if matches:
-            # Check for notifications (only on today's auto-refresh, not first load)
-            if date_str == get_beijing_today() and self._prev_matches_state:
-                self._check_notifications(matches)
+            # Check for notifications.
+            # - Normal case: _prev_matches_state has data → detect
+            #   score/status changes vs previous snapshot.
+            # - First load / cross-day: _prev_matches_state is empty →
+            #   send a "catch-up" notification for any match already in
+            #   progress with a non-zero score, so the user doesn't miss
+            #   goals that happened before the app established its baseline.
+            if date_str == get_beijing_today():
+                if self._prev_matches_state:
+                    self._check_notifications(matches)
+                else:
+                    # First load of this day — notify about live matches
+                    # that already have goals (user missed the exact moment).
+                    live_statuses = {"1h", "2h", "ht", "et", "pen"}
+                    for m in matches:
+                        if m.status in live_statuses and (
+                            m.home_score > 0 or m.away_score > 0
+                        ):
+                            self._send_notification(
+                                f"⚽ 进行中 {m.home_team} {m.home_score}-{m.away_score} {m.away_team}",
+                                f"{m.home_team} vs {m.away_team} · 第{m.clock_display or '?'}分钟"
+                            )
+                            if self._pushplus_on_goal:
+                                title, content = self._format_match_push(m, "live_catchup")
+                                self._send_pushplus(title, content)
 
             # Enrich matches with ET (extra time) goal counts by
             # hitting the summary endpoint for any AET match. This
@@ -3643,7 +3665,7 @@ class WorldCupOverlay(QWidget):
 
     def _format_match_push(self, m, kind: str, home_delta: int = 0, away_delta: int = 0) -> tuple:
         """Return (title, content) for a PushPlus push.
-        kind: 'start' or 'score_change'.
+        kind: 'start', 'score_change', or 'live_catchup'.
         For 'score_change', home_delta / away_delta are the score change
         (e.g. +1 = goal, -1 = VAR cancellation, 0 = unchanged for that side)."""
         # Build a human-readable stage tag for score_change pushes
@@ -3669,6 +3691,17 @@ class WorldCupOverlay(QWidget):
                 f"{m.home_team} vs {m.away_team}\n"
                 f"当前比分：{m.home_score} - {m.away_score}\n"
                 f"开球啦，快来围观 🏟"
+            )
+        elif kind == "live_catchup":
+            # First-load catch-up: match is already live with goals
+            title = (
+                f"⚽ 进行中 {m.home_team} {m.home_score}-{m.away_score} "
+                f"{m.away_team}"
+            )
+            content = (
+                f"{m.home_team} vs {m.away_team}\n"
+                f"当前比分：{m.home_score} - {m.away_score}\n"
+                f"第{m.clock_display or '?'}分钟 · 比赛进行中 🏟"
             )
         else:  # score_change
             # Title reflects whether it's a goal, a correction, or both
