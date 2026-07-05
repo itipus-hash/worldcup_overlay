@@ -3138,9 +3138,17 @@ class WorldCupOverlay(QWidget):
 
         # If the bulk fetch is still running and we don't have this
         # date in cache yet, wait for it. Otherwise we'd race a
-        # network fetch against the in-flight bulk and waste quota.
-        if self._bulk_fetcher and self._bulk_fetcher.isRunning() and not is_today:
-            self.status_bar.setText("正在预加载赛程数据...")
+        # network fetch against the in-flight bulk and waste quota —
+        # or, worse, get rate-limited because the bulk request
+        # already used the per-minute budget. This applies to BOTH
+        # future dates and today; the only difference is what we
+        # display in the status bar.
+        if self._bulk_fetcher and self._bulk_fetcher.isRunning() and \
+                self.current_date not in self._bulk_cache:
+            if is_today:
+                self.status_bar.setText("⏳ 预加载赛程数据中...")
+            else:
+                self.status_bar.setText("正在预加载赛程数据...")
             return
 
         # Future date that's NOT in cache: the bulk fetch has finished
@@ -3217,11 +3225,20 @@ class WorldCupOverlay(QWidget):
         self._bulk_fetcher.start()
 
     def _on_bulk_ready(self, by_date: dict):
-        """Bulk cache populated. If the user is still viewing today,
-        the in-flight _refresh_data() will already have hit the
-        empty cache and triggered a fallback fetch — that one will
-        just be replaced with the cache contents via the next
-        refresh tick."""
+        """Bulk cache populated. If the user is still viewing today
+        (or any date the cache now covers), refresh the UI from
+        cache immediately. The earlier _refresh_data() call that
+        ran while bulk was in-flight is now obsolete — it would
+        have either timed out or hit the rate limit; we want the
+        cache to be the source of truth for the first paint.
+
+        Note: even if the user is on "today" and there's a live
+        match, we still serve from the cache first. The next
+        30s tick will detect the live match and re-fetch from
+        the network. This is intentional — it gives the user
+        instant feedback (no spinner) and saves the per-minute
+        API budget for the first refresh cycle.
+        """
         for bj_date, matches in by_date.items():
             # Enrich ET scores for AET matches (same as the
             # per-date path does)
@@ -3230,7 +3247,9 @@ class WorldCupOverlay(QWidget):
         self._bulk_loaded = True
         # If the user is currently viewing a date that the cache
         # now covers, refresh the UI from cache.
-        if self.current_date in by_date:
+        if self.current_date in by_date or (
+            not self._has_ever_loaded and self.current_date in self._bulk_cache
+        ):
             self._refresh_data()
 
     def _on_bulk_finished(self):
