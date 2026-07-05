@@ -2441,6 +2441,7 @@ class WorldCupOverlay(QWidget):
         self.flag_loader = FlagLoader()
         self.refresh_interval = DEFAULT_REFRESH
         self._is_pinned = True
+        self._is_hidden = False   # Track macOS hide (⌘H) to skip UI updates
         self._live_only = False
         self.current_date = get_beijing_today()
         self.matches = []
@@ -2940,6 +2941,27 @@ class WorldCupOverlay(QWidget):
         self.countdown_timer.timeout.connect(self._update_countdowns)
         self.countdown_timer.start(60000)
 
+    def hideEvent(self, event):
+        """Track when macOS hides the window (⌘H / dock-hide).
+        We set _is_hidden so timer-driven UI updates are skipped,
+        preventing the window from stealing focus / popping to front.
+        """
+        self._is_hidden = True
+        super().hideEvent(event)
+
+    def showEvent(self, event):
+        """Track when the window becomes visible again (dock-click,
+        tray-click, ⌘⇧W). Rebuild cards with latest data so the
+        user always sees fresh scores.
+        """
+        self._is_hidden = False
+        super().showEvent(event)
+        # Rebuild cards with data already in memory (the timer kept
+        # self.matches fresh even while the window was hidden).
+        if self.matches:
+            self._rebuild_match_cards()
+            self._update_status()
+
     def _on_timer_tick(self):
         """Called every refresh interval.
 
@@ -3089,6 +3111,8 @@ class WorldCupOverlay(QWidget):
 
     def _update_countdowns(self):
         """Update countdown text on all visible cards."""
+        if self._is_hidden:
+            return
         for card in self.card_widgets:
             if hasattr(card, 'update_countdown'):
                 card.update_countdown()
@@ -3380,15 +3404,15 @@ class WorldCupOverlay(QWidget):
             # Stash the matches in the bulk cache so subsequent
             # date-flips (back to this date) are instant.
             self._bulk_cache[date_str] = (matches, time.time(), True)
-            self._rebuild_match_cards()
-            self._update_status()
-            # Force a viewport repaint so cards flush. We deliberately
-            # do NOT call self.repaint() / self.update() at the window
-            # level — those can briefly take focus and cause the
-            # overlay to "pop to foreground" when the user hid it on
-            # the dock. Viewport repaint is enough to flush card content.
-            self.scroll_area.setVisible(True)
-            self.scroll_area.viewport().update()
+            # Skip UI updates when the window is hidden (⌘H / dock-hide).
+            # The data is still fresh in self.matches; cards will be
+            # rebuilt in showEvent when the user brings the window back.
+            if not self._is_hidden:
+                self._rebuild_match_cards()
+                self._update_status()
+                # Force a viewport repaint so cards flush.
+                self.scroll_area.setVisible(True)
+                self.scroll_area.viewport().update()
             # Also persist today's snapshot so a quick app restart
             # can render this exact view before the next network
             # call returns. Cheap, and prevents the "no matches"
@@ -3397,8 +3421,9 @@ class WorldCupOverlay(QWidget):
         elif success:
             # API succeeded but no matches for this date — clear old data
             self.matches = []
-            self._rebuild_match_cards()
-            self._update_status()
+            if not self._is_hidden:
+                self._rebuild_match_cards()
+                self._update_status()
         elif not success and self._retry_count < self._max_retries:
             self._retry_count += 1
             # If we already have matches on screen, the failure is
@@ -3542,8 +3567,34 @@ class WorldCupOverlay(QWidget):
         }
 
     @staticmethod
+    @staticmethod
     def _send_notification(title: str, body: str):
-        """Send a macOS system notification."""
+        """Send a macOS system notification (non-activating).
+
+        Uses NSUserNotification via PyObjC when available; falls back
+        to osascript otherwise.  The PyObjC path never activates
+        the app, which prevents the overlay from stealing focus when
+        the user has hidden it in the dock.
+        """
+        # Try PyObjC first — this path never activates the app
+        try:
+            import objc  # type: ignore
+            from Foundation import NSString  # type: ignore
+            from AppKit import (  # type: ignore
+                NSUserNotification, NSUserNotificationCenter,
+            )
+
+            note = NSUserNotification.alloc().init()
+            note.setTitle_(NSString(string=title))
+            note.setInformativeText_(NSString(string=body))
+            note.setSoundName_("Glass")
+            center = NSUserNotificationCenter.defaultUserNotificationCenter()
+            center.deliverNotification_(note)
+            return
+        except Exception:
+            pass
+
+        # Fallback: osascript (best-effort)
         try:
             safe_body = body.replace('"', '\\"')
             safe_title = title.replace('"', '\\"')
