@@ -2484,6 +2484,10 @@ class WorldCupOverlay(QWidget):
         self._pending_refresh = False
         self._is_refreshing = False  # True while a background fetch is in progress
         self._last_refresh_time = 0  # debounce rapid manual refresh clicks
+        self._last_force_refresh_time = 0  # cooldown for force refresh (Ctrl+R or right-click)
+        self._force_refresh_cooldown = 10  # seconds, minimum interval for force refresh
+        self._cooldown_timer = None  # timer for cooldown countdown
+        self._cooldown_remaining = 0  # remaining seconds in cooldown
         self._has_ever_loaded = False
         self._retry_count = 0
         self._max_retries = 3
@@ -2543,7 +2547,8 @@ class WorldCupOverlay(QWidget):
             # Render today's view from cache immediately (sub-second
             # first paint), but FORCE a live network fetch right after
             # so we never show stale "即将开始" data after restart.
-            self._refresh_data()
+            # Use _force_refresh() for initial load (skips cooldown check).
+            self._force_refresh()
             # Remove today's cache entry so the next _refresh_data()
             # tick does a real network fetch instead of trusting stale disk cache.
             today = get_beijing_today()
@@ -2551,7 +2556,8 @@ class WorldCupOverlay(QWidget):
                 del self._bulk_cache[today]
         self._start_bulk_fetch()
         # Always do a live fetch 300ms after startup (not using cache)
-        QTimer.singleShot(300, self._refresh_data)
+        # Use _force_refresh() for initial load (skips cooldown check).
+        QTimer.singleShot(300, self._force_refresh)
 
     # ---- Settings persistence ----
 
@@ -3248,7 +3254,7 @@ class WorldCupOverlay(QWidget):
             self.current_date = dt.strftime("%m/%d/%Y")
             self.date_label.setText(self._date_display())
             self._user_navigated = True
-            self._refresh_data()
+            self._refresh_data()  # Use cache if available, don't force reload
         except Exception:
             pass
 
@@ -3256,7 +3262,7 @@ class WorldCupOverlay(QWidget):
         self.current_date = get_beijing_today()
         self.date_label.setText(self._date_display())
         self._user_navigated = True
-        self._refresh_data()
+        self._refresh_data()  # Don't force reload; use cache if all finished
 
     def _show_date_picker(self):
         """Show date picker dialog."""
@@ -3267,7 +3273,7 @@ class WorldCupOverlay(QWidget):
             self.current_date = dialog.get_date_str()
             self.date_label.setText(self._date_display())
             self._user_navigated = True
-            self._refresh_data()
+            self._refresh_data()  # Don't force reload; use cache
 
     # ---- Drag handling ----
 
@@ -3300,39 +3306,70 @@ class WorldCupOverlay(QWidget):
 
     # ---- Data Refresh ----
 
-    def _refresh_data(self):
+    def _refresh_data(self, force_reload=False, skip_cooldown=False):
         """Fetch latest match data in background thread (with re-entry guard & debounce).
 
         Debounce policy: only ignore rapid clicks that come within 2s of the
         last *successful* refresh trigger. If a click is debounced, we
         schedule a delayed retry so fast date switching still works.
 
-        Caching policy (revised after stale-data bug):
-        - "Today" (BJ today) → NEVER served from bulk cache; the user
-          wants live score updates for matches in progress, so we always
-          hit the API. Bulk cache for today is only used as a placeholder
-          before the first live fetch completes.
-        - Past dates → served from cache (matches are finished; no point
+        Caching policy:
+        - "Today" (BJ today) with LIVE/IN-PROGRESS matches → ALWAYS
+          do a live network fetch (user wants live scores).
+        - "Today" with ALL FINISHED matches → use cache, don't reload
+          (matches are over, nothing changes).
+        - Past dates → ALWAYS use cache (matches are finished; no point
           in re-fetching).
-        - Future dates → served from cache (22-day window pre-loaded on
-          startup; ESPN doesn't update future fixtures).
-        - On day rollover, the "today" cache entry is invalidated so the
-          first tick of the new day does a real network fetch.
+        - Future dates → use cache if available (22-day window pre-loaded
+          on startup); calculate countdowns locally.
+        - On day rollover, invalidate today's cache so the first tick of
+          the new day does a real network fetch.
+        
+        Force reload policy:
+        - force_reload=True → ignore cache and fetch from network
+        - Cooldown: _force_refresh_cooldown seconds (default 10s) between
+          force reloads to avoid API ban.
+        - During cooldown, shows a countdown timer in status bar that
+          updates every second until cooldown ends.
+        - skip_cooldown=True → bypass cooldown check (used for initial load).
         """
+        # Check cooldown for force reload
+        if force_reload and not skip_cooldown:
+            now = time.time()
+            if now - self._last_force_refresh_time < self._force_refresh_cooldown:
+                remaining = int(self._force_refresh_cooldown - (now - self._last_force_refresh_time)) + 1
+                # Start a countdown timer to show remaining seconds
+                self._cooldown_remaining = remaining
+                self.status_bar.setText(f"⏳ 刷新过于频繁，请等待 {remaining} 秒")
+                # Update countdown every second
+                if hasattr(self, '_cooldown_timer') and self._cooldown_timer:
+                    self._cooldown_timer.stop()
+                self._cooldown_timer = QTimer(self)
+                self._cooldown_timer.timeout.connect(self._update_cooldown)
+                self._cooldown_timer.start(1000)  # Update every second
+                return
+            self._last_force_refresh_time = now
+        
         today = get_beijing_today()
         is_today = (self.current_date == today)
 
-        # For today (Beijing date): ALWAYS do a live network fetch.
-        # Never serve today's data from bulk cache — the cache might be
-        # stale (e.g. match was "pre" when cached, but is now
-        # "in progress"). The user wants live scores, so we always hit ESPN.
-        # We still invalidate the cache entry so the live fetch isn't
-        # short-circuited.
+        # Caching logic:
+        # - Today with ALL FINISHED matches → use cache, don't reload
+        # - Today with LIVE/UPCOMING matches → do live fetch
+        # - Past dates → ALWAYS use cache (never reload)
+        # - Future dates → use cache if available (calculate locally)
+        
         if is_today:
+            # Check if all today's matches are finished
             if self.current_date in self._bulk_cache:
-                del self._bulk_cache[self.current_date]
+                cached = self._bulk_cache[self.current_date]
+                matches = cached[0] if isinstance(cached, tuple) else cached
+                if matches and all(m.status == "finished" for m in matches):
+                    # All finished → use cache, don't reload
+                    self._on_data_ready(matches, self.current_date, True)
+                    return
         else:
-            # Past / future date: serve from cache (no point re-fetching).
+            # Past or future date: ALWAYS use cache if available
             if self.current_date in self._bulk_cache:
                 cached = self._bulk_cache[self.current_date]
                 matches = cached[0] if isinstance(cached, tuple) else cached
@@ -3545,6 +3582,22 @@ class WorldCupOverlay(QWidget):
             # call returns. Cheap, and prevents the "no matches"
             # flash on relaunch.
             self._save_bulk_cache()
+            
+            # Update "今天" button state:
+            # - If viewing today and ALL matches are finished → disable button
+            # - Otherwise → enable button
+            today = get_beijing_today()
+            if date_str == today:
+                all_finished = matches and all(m.status == "finished" for m in matches)
+                self.today_btn.setEnabled(not all_finished)
+                if all_finished:
+                    self.today_btn.setToolTip("今天的比赛已全部结束")
+                else:
+                    self.today_btn.setToolTip("回到今天")
+            else:
+                # Always enable "今天" button when viewing other dates
+                self.today_btn.setEnabled(True)
+                self.today_btn.setToolTip("回到今天")
         elif success:
             # API succeeded but no matches for this date — clear old data
             self.matches = []
@@ -3584,7 +3637,7 @@ class WorldCupOverlay(QWidget):
         self.api._rate_limited_until = 0
         self._fetch_worker = None  # clear to allow new fetch
         self._retry_count = 0
-        self._refresh_data()
+        self._refresh_data(force_reload=True)
 
     def _on_fetch_finished(self):
         """Called when FetchWorker thread finishes."""
@@ -3594,6 +3647,37 @@ class WorldCupOverlay(QWidget):
             self._pending_refresh = False
             # Use QTimer.singleShot to avoid re-entering during signal handling
             QTimer.singleShot(200, self._refresh_data)
+
+    def _force_refresh(self):
+        """Force refresh data from network (with cooldown check).
+        
+        Called by:
+        - Right-click menu "立即刷新"
+        - Ctrl+R shortcut
+        - Tray icon menu "立即刷新"
+        - Initial app load (skips cooldown check)
+        """
+        # Initial load: skip cooldown check
+        if not self._has_ever_loaded:
+            self._refresh_data(force_reload=True, skip_cooldown=True)
+        else:
+            self._refresh_data(force_reload=True)
+
+    def _update_cooldown(self):
+        """Update the cooldown countdown in status bar every second."""
+        if not hasattr(self, '_cooldown_remaining'):
+            return
+        
+        self._cooldown_remaining -= 1
+        if self._cooldown_remaining <= 0:
+            # Cooldown ended, stop timer and restore status
+            if hasattr(self, '_cooldown_timer') and self._cooldown_timer:
+                self._cooldown_timer.stop()
+                self._cooldown_timer = None
+            self._update_status()
+        else:
+            # Update countdown display
+            self.status_bar.setText(f"⏳ 刷新过于频繁，请等待 {self._cooldown_remaining} 秒")
 
     # ---- Notifications ----
 
@@ -4392,7 +4476,7 @@ class WorldCupOverlay(QWidget):
         menu.addAction(show_action)
 
         refresh_action = QAction("🔄 立即刷新", menu)
-        refresh_action.triggered.connect(self._refresh_data)
+        refresh_action.triggered.connect(self._force_refresh)
         menu.addAction(refresh_action)
 
         menu.addSeparator()
@@ -4542,7 +4626,7 @@ class WorldCupOverlay(QWidget):
         """)
 
         refresh_action = QAction("🔄 立即刷新", menu)
-        refresh_action.triggered.connect(self._refresh_data)
+        refresh_action.triggered.connect(self._force_refresh)
         refresh_action.setEnabled(not self._is_refreshing)
         menu.addAction(refresh_action)
 
@@ -4579,7 +4663,7 @@ class WorldCupOverlay(QWidget):
             self.close()
         elif event.key() == Qt.Key_R and event.modifiers() == Qt.ControlModifier:
             if not self._is_refreshing:
-                self._refresh_data()
+                self._force_refresh()
         elif event.key() == Qt.Key_Left:
             self._shift_date(-1)
         elif event.key() == Qt.Key_Right:
