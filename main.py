@@ -432,6 +432,9 @@ class WorldCupAPI:
         self._request_times: list = []
         self._rate_limited_until: float = 0
         self._consecutive_429s: int = 0
+        # Summary cache: match_id -> (summary_dict, timestamp)
+        self._summary_cache: dict = {}
+        self._summary_cache_ttl: float = 30.0  # 30s TTL
 
     # ---- Quota management (lightweight, ESPN allows many reqs) ----
 
@@ -652,6 +655,17 @@ class WorldCupAPI:
         tp_id = str(tp.get("id", ""))
         tp_type = tp.get("type", "")
         period_num = (last.get("period") or {}).get("number", 0)
+        
+        # 比赛阶段中文映射
+        period_cn_map = {
+            1: "上半场",
+            2: "下半场",
+            3: "加时上半场",
+            4: "加时下半场",
+            5: "点球大战",
+        }
+        period_cn = period_cn_map.get(period_num, "未知时段")
+        
         if tp_id == "137":
             method = "头球"
         elif tp_id == "138" or "penalty" in tp_type:
@@ -687,14 +701,14 @@ class WorldCupAPI:
         minute = clock.get("displayValue") or f"{period_num * 45}'"
 
         # Cumulative score (read from the goal's text if available —
-        # the "X, Y" pattern is reliable)
+        # the "TeamName N, TeamName M" pattern in ESPN goal text)
         cumulative = ""
         goal_text = last.get("text") or ""
-        # e.g. "Goal! Australia 0, Egypt 1."
+        # e.g. "Goal! Mexico 0, England 1. Jude Bellingham ..."
         import re as _re
-        m_score = _re.search(r"(\d+)[,\s]+(\d+)", goal_text)
+        m_score = _re.search(r"(\w[\w\s]*?\w)\s+(\d+),\s*(\w[\w\s]*?\w)\s+(\d+)", goal_text)
         if m_score:
-            cumulative = f"{m_score.group(1)}-{m_score.group(2)}"
+            cumulative = f"{m_score.group(2)}-{m_score.group(4)}"
         else:
             cumulative = f"{m.home_score}-{m.away_score}"
 
@@ -708,6 +722,7 @@ class WorldCupAPI:
             "method": method,
             "minute": minute,
             "score": cumulative,
+            "period_cn": period_cn,  # 新增：比赛阶段
         }
 
     def extract_all_goals_from_summary(self, summary: dict, m) -> list:
@@ -736,6 +751,16 @@ class WorldCupAPI:
             tp_id = str(tp.get("id", ""))
             tp_type = tp.get("type", "")
             period_num = (k.get("period") or {}).get("number", 0)
+            
+            # 比赛阶段中文映射
+            period_cn_map = {
+                1: "上半场",
+                2: "下半场",
+                3: "加时上半场",
+                4: "加时下半场",
+                5: "点球大战",
+            }
+            period_cn = period_cn_map.get(period_num, "未知时段")
             if tp_id == "137":
                 method = "头球"
             elif tp_id == "138" or "penalty" in tp_type:
@@ -762,9 +787,9 @@ class WorldCupAPI:
             minute = clock.get("displayValue") or f"{period_num * 45}'"
             cumulative = ""
             goal_text = k.get("text") or ""
-            m_score = _re.search(r"(\d+)[,\s]+(\d+)", goal_text)
+            m_score = _re.search(r"(\w[\w\s]*?\w)\s+(\d+),\s*(\w[\w\s]*?\w)\s+(\d+)", goal_text)
             if m_score:
-                cumulative = f"{m_score.group(1)}-{m_score.group(2)}"
+                cumulative = f"{m_score.group(2)}-{m_score.group(4)}"
             else:
                 cumulative = f"{m.home_score}-{m.away_score}"
             out.append({
@@ -774,6 +799,7 @@ class WorldCupAPI:
                 "method": method,
                 "minute": minute,
                 "score": cumulative,
+                "period_cn": period_cn,  # 新增：比赛阶段
             })
         return out
 
@@ -2551,8 +2577,18 @@ class WorldCupOverlay(QWidget):
                     end_pushed = data.get("end_pushed_ids", [])
                     self._end_pushed = set(end_pushed)
                     # Load last_pushed_score: match_id -> [home, away]
+                    # 如果数据太旧（超过 2 小时），清空（避免推送过期数据）
                     lps = data.get("last_pushed_score", {})
-                    self._last_pushed_score = {k: v for k, v in lps.items()}
+                    import time
+                    saved_at = data.get("saved_at", 0)
+                    if time.time() - saved_at > 7200:  # 2 小时
+                        self._last_pushed_score = {}
+                    else:
+                        self._last_pushed_score = {k: v for k, v in lps.items()}
+                    # Debug log
+                    import datetime
+                    with open("/tmp/worldcup_notify.log", "a") as f:
+                        f.write(f"[{datetime.datetime.now()}] _load_settings: loaded last_pushed_score={self._last_pushed_score}\n")
         except Exception:
             pass
 
@@ -2629,6 +2665,7 @@ class WorldCupOverlay(QWidget):
         """Save all settings to config file."""
         os.makedirs(CONFIG_DIR, exist_ok=True)
         try:
+            import time
             with open(SETTINGS_PATH, "w") as f:
                 json.dump({
                     "refresh_interval": self.refresh_interval,
@@ -2641,6 +2678,7 @@ class WorldCupOverlay(QWidget):
                     "pushplus_on_goal": getattr(self, "_pushplus_on_goal", False),
                     "end_pushed_ids": list(self._end_pushed),
                     "last_pushed_score": self._last_pushed_score,
+                    "saved_at": time.time(),  # 用于判断数据是否过期
                 }, f, indent=2)
         except Exception:
             pass
@@ -3574,10 +3612,13 @@ class WorldCupOverlay(QWidget):
         stage = stage_map.get(m.status, "进行中")
         if m.status in ("ht", "pen"):
             return stage
-        minute_str = f" {m.minute}'" if m.minute else ""
+        # m.minute 可能已经是 "90'+1" 格式（带'），不要再追加'
+        minute_raw = str(m.minute) if m.minute else ""
+        if minute_raw and not minute_raw.endswith("'"):
+            minute_raw = minute_raw + "'"
         if m.status == "et":
-            return f"加时 {m.minute}'" if m.minute else "加时赛"
-        return f"{stage}{minute_str}"
+            return f"加时 {minute_raw}" if minute_raw else "加时赛"
+        return f"{stage} {minute_raw}" if minute_raw else stage
 
     def _check_notifications(self, new_matches: list):
         """Send macOS + PushPlus notifications for match events.
@@ -3589,6 +3630,10 @@ class WorldCupOverlay(QWidget):
         - 有记录 + 当前比分 != 已推送比分 → 推"比分更新 A-B → X-Y"，并更新记录
         - 比赛结束 → 推"比赛结束"，并记录（避免重复推）
         """
+        # Debug log
+        import datetime
+        with open("/tmp/worldcup_notify.log", "a") as f:
+            f.write(f"[{datetime.datetime.now()}] _check_notifications: {len(new_matches)} matches, last_pushed_score={self._last_pushed_score}\n")
         live_statuses = {"1h", "2h", "ht", "et", "pen", "live"}
 
         for m in new_matches:
@@ -3597,22 +3642,25 @@ class WorldCupOverlay(QWidget):
             if m.status in live_statuses:
                 if last is None:
                     # 第一次推这场比赛
-                    # 根据比分和比赛状态决定标题
                     status_disp = self._status_display(m)
                     if m.home_score == 0 and m.away_score == 0 and (not m.minute or m.minute <= 10):
-                        # 刚开赛，比分0-0
                         title = f"⚽ 比赛开始 · {m.home_team} vs {m.away_team}"
                         body = f"已开赛 {m.minute or '?'}分钟 · 当前比分：{m.home_score}-{m.away_score}"
                     else:
-                        # 比赛已进行一段时间，直接显示进度
                         title = f"⚽ {status_disp} · {m.home_team} vs {m.away_team}"
                         body = f"{status_disp} · 当前比分：{m.home_score}-{m.away_score}"
+                    # 先推 macOS 通知
                     self._send_notification(title, body)
+                    # 再推 PushPlus，成功才记录
+                    push_ok = True  # macOS 通知基本不会失败
                     if self._pushplus_on_start:
                         t, c = self._format_match_push(m, "start")
-                        self._send_pushplus(t, c)
-                    self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
-                    self._save_settings()
+                        if not self._send_pushplus(t, c):
+                            push_ok = False
+                    # 只有推送成功后才记录（避免推送失败但记录已写入，导致下次不推）
+                    if push_ok or not self._pushplus_on_start:
+                        self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
+                        self._save_settings()
                 else:
                     prev_home, prev_away = last[0], last[1]
                     if m.home_score != prev_home or m.away_score != prev_away:
@@ -3623,25 +3671,31 @@ class WorldCupOverlay(QWidget):
                             f"⚽ 比分变化 · {m.home_team} {m.home_score}-{m.away_score} {m.away_team}",
                             f"比分更新：{prev_home}-{prev_away} → {m.home_score}-{m.away_score}"
                         )
+                        push_ok = True
                         if self._pushplus_on_goal:
                             t, c = self._format_goal_push(m, home_delta, away_delta)
-                            self._send_pushplus(t, c)
-                        self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
-                        self._save_settings()
+                            if not self._send_pushplus(t, c):
+                                push_ok = False
+                        if push_ok or not self._pushplus_on_goal:
+                            self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
+                            self._save_settings()
 
             elif m.status == "finished":
-                # 比赛结束，推送（如果之前有推送记录）
-                if last is not None and m.match_id not in self._end_pushed:
+                # 比赛结束，推送（如果之前没推送过结束通知）
+                if m.match_id not in self._end_pushed:
                     self._send_notification(
                         f"🏁 比赛结束 · {m.home_team} vs {m.away_team}",
                         f"最终比分：{m.home_score} - {m.away_score} · 全场比赛结束"
                     )
+                    push_ok = True
                     if self._pushplus_on_start:
                         t, c = self._format_match_push(m, "end")
-                        self._send_pushplus(t, c)
-                    self._end_pushed.add(m.match_id)
-                    self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
-                    self._save_settings()
+                        if not self._send_pushplus(t, c):
+                            push_ok = False
+                    if push_ok or not self._pushplus_on_start:
+                        self._end_pushed.add(m.match_id)
+                        self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
+                        self._save_settings()
 
         # 更新 prev 状态，供下次 fetch 对比
         self._prev_matches_state = {
@@ -3680,19 +3734,20 @@ class WorldCupOverlay(QWidget):
         except Exception:
             pass
 
-    def _send_pushplus(self, title: str, content: str):
+    def _send_pushplus(self, title: str, content: str) -> bool:
         """Send a push notification via PushPlus (pushplus.plus).
         Supports multiple tokens separated by '/' — each token gets its own push.
-        Silently no-ops if no valid tokens or all requests fail."""
+        Returns True if at least one push succeeded, False otherwise."""
         raw = getattr(self, "_pushplus_token", "")
         if not raw:
-            return
+            return False
         # Split on '/' and strip whitespace; ignore empty fragments
         tokens = [t.strip() for t in raw.split("/") if t.strip()]
         if not tokens:
-            return
+            return False
         url = "https://www.pushplus.plus/api/send"
         headers = {"Content-Type": "application/json"}
+        any_success = False
         for token in tokens:
             try:
                 payload = {
@@ -3700,10 +3755,13 @@ class WorldCupOverlay(QWidget):
                     "title": title,
                     "content": content,
                 }
-                requests.post(url, json=payload, headers=headers, timeout=5)
+                resp = requests.post(url, json=payload, headers=headers, timeout=5)
+                if resp.ok:
+                    any_success = True
             except Exception:
                 # One bad token shouldn't stop the others from receiving the push
                 continue
+        return any_success
 
     def _format_match_push(self, m, kind: str, home_delta: int = 0, away_delta: int = 0) -> tuple:
         """Return (title, content) for a PushPlus push.
@@ -3734,27 +3792,82 @@ class WorldCupOverlay(QWidget):
             else:
                 status_disp = self._status_display(m)
                 title = f"{m.home_team} VS {m.away_team} {status_disp}"
-            content = (
-                f"{self._status_display(m)} · {m.home_team} vs {m.away_team}\n"
-                f"当前比分：{m.home_score} - {m.away_score}"
-            )
+            # content: 状态和比分 + 进球明细（如果有的话）
+            lines = [
+                f"{self._status_display(m)} · {m.home_team} vs {m.away_team}",
+                f"当前比分：{m.home_score} - {m.away_score}",
+            ]
+            # 比分不是0-0时，尝试获取进球明细
+            if (m.home_score > 0 or m.away_score > 0) and hasattr(self, 'api'):
+                try:
+                    summary = self.api.fetch_match_summary(m.match_id)
+                    if summary:
+                        all_goals = self.api.extract_all_goals_from_summary(summary, m)
+                        if all_goals:
+                            lines.append("进球明细：")
+                        for g in all_goals:
+                            g_team = f"（{g['team_cn']}）" if g.get('team_cn') else ""
+                            # 显示格式：比赛阶段 + 时间 + 球员 + 方式 + 比分
+                            period_cn = g.get('period_cn', '')
+                            lines.append(
+                                f"  {period_cn} {g['minute']} {g['scorer']}{g_team} {g['method']}  {g['score']}"
+                            )
+                except Exception:
+                    pass
+            content = "<br>".join(lines)
         elif kind == "end":
             title = f"{m.home_team} VS {m.away_team} 比赛结束"
-            content = (
-                f"最终比分：{m.home_score} - {m.away_score}\n"
-                f"全场比赛结束 🏁"
-            )
+            lines = [
+                f"最终比分：{m.home_score} - {m.away_score}",
+                "全场比赛结束 🏁",
+            ]
+            # 比赛结束时也包含进球明细
+            if (m.home_score > 0 or m.away_score > 0) and hasattr(self, 'api'):
+                try:
+                    summary = self.api.fetch_match_summary(m.match_id)
+                    if summary:
+                        all_goals = self.api.extract_all_goals_from_summary(summary, m)
+                        if all_goals:
+                            lines.append("进球明细：")
+                        for g in all_goals:
+                            g_team = f"（{g['team_cn']}）" if g.get('team_cn') else ""
+                            # 显示格式：比赛阶段 + 时间 + 球员 + 方式 + 比分
+                            period_cn = g.get('period_cn', '')
+                            lines.append(
+                                f"  {period_cn} {g['minute']} {g['scorer']}{g_team} {g['method']}  {g['score']}"
+                            )
+                except Exception:
+                    pass
+            content = "<br>".join(lines)
         elif kind == "live_catchup":
             # First-load catch-up: match is already live with goals
+            status_disp = self._status_display(m)
             title = (
                 f"⚽ 进行中 {m.home_team} {m.home_score}-{m.away_score} "
                 f"{m.away_team}"
             )
-            content = (
-                f"{m.home_team} vs {m.away_team}\n"
-                f"当前比分：{m.home_score} - {m.away_score}\n"
-                f"第{m.minute or '?'}分钟 · 比赛进行中 🏟"
-            )
+            lines = [
+                f"{m.home_team} vs {m.away_team}",
+                f"{status_disp} · 当前比分：{m.home_score} - {m.away_score}",
+            ]
+            # 包含进球明细
+            if (m.home_score > 0 or m.away_score > 0) and hasattr(self, 'api'):
+                try:
+                    summary = self.api.fetch_match_summary(m.match_id)
+                    if summary:
+                        all_goals = self.api.extract_all_goals_from_summary(summary, m)
+                        if all_goals:
+                            lines.append("进球明细：")
+                        for g in all_goals:
+                            g_team = f"（{g['team_cn']}）" if g.get('team_cn') else ""
+                            # 显示格式：比赛阶段 + 时间 + 球员 + 方式 + 比分
+                            period_cn = g.get('period_cn', '')
+                            lines.append(
+                                f"  {period_cn} {g['minute']} {g['scorer']}{g_team} {g['method']}  {g['score']}"
+                            )
+                except Exception:
+                    pass
+            content = "<br>".join(lines)
         else:  # score_change
             # Title reflects whether it's a goal, a correction, or both
             has_goal = home_delta > 0 or away_delta > 0
@@ -3774,11 +3887,47 @@ class WorldCupOverlay(QWidget):
                 delta_parts.append(f"{m.away_team} {away_delta:+d}")
             delta_line = "（" + " / ".join(delta_parts) + "）" if delta_parts else ""
 
-            content = (
-                f"{m.home_team} vs {m.away_team}\n"
-                f"当前比分：{m.home_score} - {m.away_score}{stage_tag}\n"
-                f"{delta_line}".rstrip()
-            )
+            # Content: 当前比分 + 进球明细
+            lines = [
+                f"{m.home_team} vs {m.away_team}",
+                f"当前比分：{m.home_score} - {m.away_score}{stage_tag}",
+            ]
+            if delta_line:
+                lines.append(delta_line)
+            
+            # 包含进球明细
+            if (m.home_score > 0 or m.away_score > 0) and hasattr(self, 'api'):
+                try:
+                    summary = self.api.fetch_match_summary(m.match_id)
+                    if summary:
+                        all_goals = self.api.extract_all_goals_from_summary(summary, m)
+                        if all_goals:
+                            lines.append("进球明细：")
+                        for g in all_goals:
+                            g_team = f"（{g['team_cn']}）" if g.get('team_cn') else ""
+                            # 显示格式：比赛阶段 + 时间 + 球员 + 方式 + 比分
+                            period_cn = g.get('period_cn', '')
+                            lines.append(
+                                f"  {period_cn} {g['minute']} {g['scorer']}{g_team} {g['method']}  {g['score']}"
+                            )
+                            # 如果有比分回退（进球取消），添加提示
+                            if has_correction:
+                                cancelled_teams = []
+                                if home_delta < 0:
+                                    cancelled_teams.append(m.home_team)
+                                if away_delta < 0:
+                                    cancelled_teams.append(m.away_team)
+                                cancelled_str = "、".join(cancelled_teams)
+                                prev_home = m.home_score - home_delta
+                                prev_away = m.away_score - away_delta
+                                lines.append(
+                                    f"⚠️ 注：{cancelled_str}一粒进球已被VAR取消"
+                                    f"（原比分 {prev_home}-{prev_away} → {m.home_score}-{m.away_score}）"
+                                )
+                except Exception:
+                    pass
+
+            content = "<br>".join(lines)
         return title, content
 
     def _format_goal_push(self, m, home_delta: int = 0, away_delta: int = 0) -> tuple:
@@ -3832,8 +3981,8 @@ class WorldCupOverlay(QWidget):
             title = f"⚽ {scorer}{head_team} {method}  {score_str}"
 
         # --- Content: full goal log for this match ---
-        # Always show the current score header so the user can see
-        # "the final" + "all goals" at a glance.
+        # Use <br> for line breaks (WeChat renders HTML in PushPlus content).
+        br = "<br>"
         if all_goals:
             lines = [f"{m.home_team} {m.home_score}-{m.away_score} {m.away_team}  进球明细："]
             for g in all_goals:
@@ -3842,9 +3991,13 @@ class WorldCupOverlay(QWidget):
                 lines.append(
                     f"  {g_minute} {g['scorer']}{g_team} {g['method']}  {g['score']}"
                 )
-            content = "\n".join(lines)
+            content = br.join(lines)
         else:
-            content = ""
+            # summary 获取失败，至少显示当前比分和最后进球
+            content = (
+                f"{m.home_team} {m.home_score}-{m.away_score} {m.away_team}{br}"
+                f"进球明细：（详情获取失败，当前比分：{m.home_score}-{m.away_score}）"
+            )
 
         return title, content
 
