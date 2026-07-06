@@ -1017,45 +1017,49 @@ class WorldCupAPI:
     def _fetch_for_bj_date(self, date_str_mmddyyyy: str) -> list:
         """Fetch events whose Beijing local date matches the given date.
 
-        ESPN stores dates in UTC; a Beijing date can span two adjacent
-        UTC days. We pull a 3-day UTC range that fully covers the
-        target BJ date plus its neighbours, then filter in-memory by
-        the BJ local date.
+        ESPN stores dates in EDT/UTC; a Beijing date can span up to
+        TWO adjacent EDT days (BJ is UTC+8, EDT is UTC-4, so the
+        offset is 12 hours — a match at 20:00 EDT lands at 08:00 BJ
+        next day). We pull a 5-day EDT range (BJ ± 2 days) to be
+        safe, then filter IN-MEMORY by the Beijing local date.
 
-        This is needed because ESPN's un-parameterized / "today" endpoint
-        returns the *current UTC* date's events, which is often the
-        PREVIOUS Beijing date from a Chinese user's perspective.
-
-        Returns the raw event list (un-filtered to allow callers to
-        bucket across days if needed) — actually we DO filter here
-        to keep callers simple.
+        This is the ONLY correct way: never trust ESPN's date grouping.
+        Always convert each match's UTC startDate to Beijing time, then
+        bucket by that Beijing date.
         """
         try:
             m, d, y = date_str_mmddyyyy.split("/")
             bj_target = f"{int(m):02d}/{int(d):02d}/{int(y):04d}"
-            bj_dt = datetime(int(y), int(m), int(d))
         except Exception:
             return []
 
-        # Pull a 3-day UTC range around the BJ date: BJ date -1 .. BJ date +1
-        # is sufficient because the max offset is 16 hours (BJ is UTC+8),
-        # so a BJ day's events are always within those three UTC days.
-        utc_start = (bj_dt - timedelta(days=1)).strftime("%Y%m%d")
-        utc_end = (bj_dt + timedelta(days=1)).strftime("%Y%m%d")
+        # Compute the Beijing date's UTC equivalents.
+        # BJ = UTC+8, so BJ 00:00 = UTC 16:00 previous day.
+        # BJ 23:59 = UTC 15:59 same day.
+        # A BJ day can span UTC days [bj_utc_start, bj_utc_end].
+        # To be safe, fetch ESPN dates from (BJ date - 2 days)
+        # to (BJ date + 2 days) in ESPN's date system.
+        # ESPN dates are in EDT (UTC-4), so we need to cover
+        # the full range. Be conservative: fetch 5 days.
+        bj_dt = datetime(int(y), int(m), int(d))
+        # Fetch ESPN dates from (BJ - 2) to (BJ + 2) to cover
+        # all possible EDT/UTC dates that could contain a match
+        # whose Beijing date is bj_target.
+        utc_start = (bj_dt - timedelta(days=2)).strftime("%Y%m%d")
+        utc_end   = (bj_dt + timedelta(days=2)).strftime("%Y%m%d")
 
         events = self._fetch_for_date_range(utc_start, utc_end)
         if not events:
             return []
 
         # Filter to events whose Beijing local date == bj_target.
-        # _build_match produces local_date in MM/DD/YYYY HH:MM format.
-        # We do a lightweight pre-filter using the raw UTC date to
-        # avoid building a Match for obviously-wrong days.
-        # But simpler: build all, then filter.
+        # We convert startDate (UTC ISO) to Beijing time, then compare.
         out = []
         for ev in events:
             comp = (ev.get("competitions") or [{}])[0]
             date_src = comp.get("startDate") or ev.get("date") or ""
+            if not date_src:
+                continue
             bj = self._utc_to_beijing(date_src)
             if bj.get("date") == bj_target:
                 out.append(ev)
@@ -1212,8 +1216,12 @@ class BulkFetchWorker(QThread):
         try:
             m, d, y = self.today_str.split("/")
             today = datetime(int(y), int(m), int(d))
-            utc_start = (today - timedelta(days=self.past_days + 1)).strftime("%Y%m%d")
-            utc_end = (today + timedelta(days=self.future_days + 1)).strftime("%Y%m%d")
+            # Fetch a wider EDT window: BJ date ± 2 days.
+            # BJ = UTC+8, EDT = UTC-4 → 12h offset.
+            # A BJ day's matches can land on (EDT = BJ - 12h),
+            # so we need EDT dates from (BJ - 2) to (BJ + future + 2).
+            utc_start = (today - timedelta(days=2)).strftime("%Y%m%d")
+            utc_end   = (today + timedelta(days=self.future_days + 2)).strftime("%Y%m%d")
             events = self.api._fetch_for_date_range(utc_start, utc_end)
             if not events:
                 self.bulk_ready.emit({})
@@ -1253,7 +1261,7 @@ class _PushTestWorker(QThread):
         self.dialog = dialog
 
     def run(self):
-        url = "http://www.pushplus.plus/send"
+        url = "https://www.pushplus.plus/api/send"
         # Build the test payload using the dialog's _format_test_push
         # helper. We do this here (not in the slot) to keep the slot
         # non-blocking.
@@ -2462,6 +2470,7 @@ class WorldCupOverlay(QWidget):
         self._start_pushed_loaded = False
         self._end_pushed = set()  # set of match_id strings (match end notifications)
         self._last_pushed_score = {}  # match_id -> [home_score, away_score]
+        self._user_navigated = False  # True if user manually changed date
         # Per-match goal log for goal-detail pushes:
         # match_id -> { "scored_count": <int>, "last_goal": <dict> | None }
         # last_goal fields: scorer, team, method, minute, clock_display, cumulative
@@ -2580,7 +2589,11 @@ class WorldCupOverlay(QWidget):
             # Rehydrate Match objects. We use the existing
             # Match dataclass directly — every field it stores
             # is JSON-serializable (str / int / bool).
+            today = get_beijing_today()
             for bj_date, match_dicts in by_date.items():
+                # Skip today's cache — always fetch fresh for today.
+                if bj_date == today:
+                    continue
                 matches = []
                 for d in match_dicts:
                     try:
@@ -3026,6 +3039,11 @@ class WorldCupOverlay(QWidget):
             # skips them → no "比赛开始" push.
             self._prev_matches_state = {}
             self._match_goal_state = {}
+            # Clear push state for old matches to avoid stale
+            # "比赛结束" pushes on app restart
+            self._end_pushed.clear()
+            self._start_pushed.clear()
+            self._last_pushed_score.clear()
             # If we were viewing yesterday/older, jump back to today on rollover
             if self.current_date != today:
                 self.current_date = today
@@ -3199,6 +3217,7 @@ class WorldCupOverlay(QWidget):
                 dt = wc_max
             self.current_date = dt.strftime("%m/%d/%Y")
             self.date_label.setText(self._date_display())
+            self._user_navigated = True
             self._refresh_data()
         except Exception:
             pass
@@ -3206,6 +3225,7 @@ class WorldCupOverlay(QWidget):
     def _go_today(self):
         self.current_date = get_beijing_today()
         self.date_label.setText(self._date_display())
+        self._user_navigated = True
         self._refresh_data()
 
     def _show_date_picker(self):
@@ -3216,6 +3236,7 @@ class WorldCupOverlay(QWidget):
         if dialog.exec_() == QDialog.Accepted:
             self.current_date = dialog.get_date_str()
             self.date_label.setText(self._date_display())
+            self._user_navigated = True
             self._refresh_data()
 
     # ---- Drag handling ----
@@ -3271,40 +3292,23 @@ class WorldCupOverlay(QWidget):
         today = get_beijing_today()
         is_today = (self.current_date == today)
 
-        # Future / past date: serve from cache.
-        # Today: use cache if there's a real, recent entry AND no live
-        # matches are in progress — BUT force a network refresh if the
-        # cached snapshot is older than CACHE_STALE_SECS. This prevents
-        # the "app shows stale data all day because it never re-fetches"
-        # bug where bulk-cache populates once and then the timer shortcut
-        # serves that same snapshot forever.
-        if self.current_date in self._bulk_cache:
-            cached = self._bulk_cache[self.current_date]
-            matches = cached[0] if isinstance(cached, tuple) else cached
-            has_live = any(m.status in ("1h", "2h", "ht", "et", "pen")
-                           for m in matches)
-            # For future/past dates, always trust cache.
-            # For today with no live match: only trust cache if fresh.
-            if not is_today:
+        # For today (Beijing date): ALWAYS do a live network fetch.
+        # Never serve today's data from bulk cache — the cache might be
+        # stale (e.g. match was "pre" when cached, but is now
+        # "in progress"). The user wants live scores, so we always hit ESPN.
+        # We still invalidate the cache entry so the live fetch isn't
+        # short-circuited.
+        if is_today:
+            if self.current_date in self._bulk_cache:
+                del self._bulk_cache[self.current_date]
+        else:
+            # Past / future date: serve from cache (no point re-fetching).
+            if self.current_date in self._bulk_cache:
+                cached = self._bulk_cache[self.current_date]
+                matches = cached[0] if isinstance(cached, tuple) else cached
                 success = True
                 self._on_data_ready(matches, self.current_date, success)
                 return
-            if not has_live:
-                # Check if there are upcoming matches that could start soon.
-                has_upcoming = any(
-                    m.status in ("notstarted", "pre") and m.local_date
-                    for m in matches
-                )
-                cache_age = time.time() - (cached[1] if isinstance(cached, tuple) else 0)
-                if has_upcoming:
-                    max_age = 90   # 1.5 min — must poll frequently near kickoff
-                else:
-                    max_age = 600  # 10 min — only finished/upcoming-far matches left
-                if cache_age < max_age:
-                    success = True
-                    self._on_data_ready(matches, self.current_date, success)
-                    return
-                # Cache stale → fall through to live fetch below
 
         # If the bulk fetch is still running and we don't have this
         # date in cache yet, wait for it. Otherwise we'd race a
@@ -3394,6 +3398,40 @@ class WorldCupOverlay(QWidget):
         self._bulk_fetcher.finished.connect(self._on_bulk_finished)
         self._bulk_fetcher.start()
 
+    def _find_live_date(self):
+        """Scan all dates in the bulk cache and return the date
+        (string 'YYYY-MM-DD') that has at least one live match.
+        Returns None if no live match is found.
+        """
+        live_statuses = {"1h", "2h", "ht", "et", "pen", "live"}
+        for bj_date, (matches, _, _) in self._bulk_cache.items():
+            if any(m.status in live_statuses for m in matches):
+                return bj_date
+        return None
+
+    def _auto_switch_to_live_date(self):
+        """If the current date has no live match, but another date
+        in the cache does, switch to that date automatically.
+
+        Only switches if:
+        - bulk cache is loaded
+        - current date has no live match
+        - another date has a live match
+        - user hasn't manually navigated (self._user_navigated is False)
+        """
+        if not self._bulk_loaded:
+            return
+        live_date = self._find_live_date()
+        if live_date and live_date != self.current_date:
+            # Check if current date has any live match
+            current_matches = self._bulk_cache.get(self.current_date, (None, None, False))[0]
+            current_has_live = current_matches and any(
+                m.status in {"1h", "2h", "ht", "et", "pen", "live"} for m in current_matches
+            )
+            if not current_has_live:
+                self._user_navigated = False  # allow auto-switch
+                self._navigate_to_date(live_date)
+
     def _on_bulk_ready(self, by_date: dict):
         """Bulk cache populated. If the user is still viewing today
         (or any date the cache now covers), refresh the UI from
@@ -3428,6 +3466,11 @@ class WorldCupOverlay(QWidget):
             not self._has_ever_loaded and self.current_date in self._bulk_cache
         ):
             self._refresh_data()
+
+        # Auto-switch to the date with live matches (e.g. if the
+        # live match is on yesterday but today is selected).
+        if not getattr(self, '_user_navigated', False):
+            self._auto_switch_to_live_date()
 
     def _on_bulk_finished(self):
         # Bulk thread done; nothing else to do — the cache is the
@@ -3576,17 +3619,24 @@ class WorldCupOverlay(QWidget):
                 self._save_settings()
 
             # --- Match end notification ---
+            # Only push end notification if the match was previously
+            # seen as live (prev exists and prev_status was a live status).
+            # This prevents pushing "比赛结束" for matches that were
+            # already finished when the app first loaded them.
             if m.status == "finished" and m.match_id not in self._end_pushed:
-                self._send_notification(
-                    f"🏁 比赛结束 · {m.home_team} vs {m.away_team}",
-                    f"最终比分：{m.home_score} - {m.away_score} · 全场比赛结束"
-                )
-                if self._pushplus_on_start:
-                    t, c = self._format_match_push(m, "end")
-                    self._send_pushplus(t, c)
-                self._end_pushed.add(m.match_id)
-                self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
-                self._save_settings()
+                prev = self._prev_matches_state.get(m.match_id)
+                was_live = prev is not None and prev[0] in live_statuses
+                if was_live or m.match_id in self._start_pushed:
+                    self._send_notification(
+                        f"🏁 比赛结束 · {m.home_team} vs {m.away_team}",
+                        f"最终比分：{m.home_score} - {m.away_score} · 全场比赛结束"
+                    )
+                    if self._pushplus_on_start:
+                        t, c = self._format_match_push(m, "end")
+                        self._send_pushplus(t, c)
+                    self._end_pushed.add(m.match_id)
+                    self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
+                    self._save_settings()
 
             # --- Score change notifications (only when prev exists) ---
             if prev is None:
@@ -3713,7 +3763,7 @@ class WorldCupOverlay(QWidget):
         tokens = [t.strip() for t in raw.split("/") if t.strip()]
         if not tokens:
             return
-        url = "http://www.pushplus.plus/send"
+        url = "https://www.pushplus.plus/api/send"
         headers = {"Content-Type": "application/json"}
         for token in tokens:
             try:
