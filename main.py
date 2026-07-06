@@ -2455,6 +2455,13 @@ class WorldCupOverlay(QWidget):
         self._max_retries = 3
         self._last_known_today = get_beijing_today()
         self._prev_matches_state = {}  # match_id -> (status, home_score, away_score)
+        # Matches that have already had their "比赛开始" notification sent.
+        # Persisted to disk via settings.json ("start_pushed_ids") so the
+        # push isn't re-sent after an app restart.
+        self._start_pushed = set()  # set of match_id strings
+        self._start_pushed_loaded = False
+        self._end_pushed = set()  # set of match_id strings (match end notifications)
+        self._last_pushed_score = {}  # match_id -> [home_score, away_score]
         # Per-match goal log for goal-detail pushes:
         # match_id -> { "scored_count": <int>, "last_goal": <dict> | None }
         # last_goal fields: scorer, team, method, minute, clock_display, cumulative
@@ -2499,13 +2506,18 @@ class WorldCupOverlay(QWidget):
         # "no matches" flash for ~5-10s while waiting for ESPN.
         cache_loaded = self._load_bulk_cache()
         if cache_loaded:
-            # If the user's last-seen view was today, render from
-            # cache right now. _refresh_data will later overwrite
-            # this with the network fetch, but the cache render
-            # gives the user a sub-second first paint.
             self._bulk_loaded = True
+            # Render today's view from cache immediately (sub-second
+            # first paint), but FORCE a live network fetch right after
+            # so we never show stale "即将开始" data after restart.
             self._refresh_data()
+            # Remove today's cache entry so the next _refresh_data()
+            # tick does a real network fetch instead of trusting stale disk cache.
+            today = get_beijing_today()
+            if today in self._bulk_cache:
+                del self._bulk_cache[today]
         self._start_bulk_fetch()
+        # Always do a live fetch 300ms after startup (not using cache)
         QTimer.singleShot(300, self._refresh_data)
 
     # ---- Settings persistence ----
@@ -2528,6 +2540,16 @@ class WorldCupOverlay(QWidget):
                     self._pushplus_token = data.get("pushplus_token", "")
                     self._pushplus_on_start = data.get("pushplus_on_start", False)
                     self._pushplus_on_goal = data.get("pushplus_on_goal", False)
+                    # Load start_pushed set (match IDs already notified)
+                    pushed = data.get("start_pushed_ids", [])
+                    self._start_pushed = set(pushed)
+                    self._start_pushed_loaded = True
+                    # Load end_pushed set (match end notifications)
+                    end_pushed = data.get("end_pushed_ids", [])
+                    self._end_pushed = set(end_pushed)
+                    # Load last_pushed_score: match_id -> [home, away]
+                    lps = data.get("last_pushed_score", {})
+                    self._last_pushed_score = {k: v for k, v in lps.items()}
         except Exception:
             pass
 
@@ -2610,6 +2632,9 @@ class WorldCupOverlay(QWidget):
                     "pushplus_token": getattr(self, "_pushplus_token", ""),
                     "pushplus_on_start": getattr(self, "_pushplus_on_start", False),
                     "pushplus_on_goal": getattr(self, "_pushplus_on_goal", False),
+                    "start_pushed_ids": list(self._start_pushed),
+                    "end_pushed_ids": list(self._end_pushed),
+                    "last_pushed_score": self._last_pushed_score,
                 }, f, indent=2)
         except Exception:
             pass
@@ -3042,10 +3067,18 @@ class WorldCupOverlay(QWidget):
                 # network call.
                 self._update_countdowns()
                 return
-            # Within 30 min of kickoff: full normal refresh at user
-            # setting, so when the match actually starts we're fresh.
-            if self.refresh_timer.interval() != self.refresh_interval * 1000:
-                self.refresh_timer.setInterval(self.refresh_interval * 1000)
+            # Within 30 min of kickoff: gradually shorten interval
+            if next_min <= 1:
+                # Within 1 min of kickoff: 15 s for near-instant start detection
+                if self.refresh_timer.interval() != 15_000:
+                    self.refresh_timer.setInterval(15_000)
+            elif next_min <= 5:
+                # Within 5 min: 30 s
+                if self.refresh_timer.interval() != 30_000:
+                    self.refresh_timer.setInterval(30_000)
+            else:
+                if self.refresh_timer.interval() != self.refresh_interval * 1000:
+                    self.refresh_timer.setInterval(self.refresh_interval * 1000)
 
         # Need to actually refresh — reset the API cache so the worker
         # fetches fresh data (not the cached "all matches" list).
@@ -3257,12 +3290,21 @@ class WorldCupOverlay(QWidget):
                 self._on_data_ready(matches, self.current_date, success)
                 return
             if not has_live:
+                # Check if there are upcoming matches that could start soon.
+                has_upcoming = any(
+                    m.status in ("notstarted", "pre") and m.local_date
+                    for m in matches
+                )
                 cache_age = time.time() - (cached[1] if isinstance(cached, tuple) else 0)
-                if cache_age < 900:   # 15 minutes — ESPN rarely updates >15min before kickoff
+                if has_upcoming:
+                    max_age = 90   # 1.5 min — must poll frequently near kickoff
+                else:
+                    max_age = 600  # 10 min — only finished/upcoming-far matches left
+                if cache_age < max_age:
                     success = True
                     self._on_data_ready(matches, self.current_date, success)
                     return
-                # Cache stale (>15min) → fall through to live fetch below
+                # Cache stale → fall through to live fetch below
 
         # If the bulk fetch is still running and we don't have this
         # date in cache yet, wait for it. Otherwise we'd race a
@@ -3401,31 +3443,10 @@ class WorldCupOverlay(QWidget):
             self._retry_count = 0
 
         if matches:
-            # Check for notifications.
-            # - Normal case: _prev_matches_state has data → detect
-            #   score/status changes vs previous snapshot.
-            # - First load / cross-day: _prev_matches_state is empty →
-            #   send a "catch-up" notification for any match already in
-            #   progress with a non-zero score, so the user doesn't miss
-            #   goals that happened before the app established its baseline.
+            # Check for notifications (always call, _check_notifications
+            # uses _start_pushed set to avoid re-sending).
             if date_str == get_beijing_today():
-                if self._prev_matches_state:
-                    self._check_notifications(matches)
-                else:
-                    # First load of this day — notify about live matches
-                    # that already have goals (user missed the exact moment).
-                    live_statuses = {"1h", "2h", "ht", "et", "pen"}
-                    for m in matches:
-                        if m.status in live_statuses and (
-                            m.home_score > 0 or m.away_score > 0
-                        ):
-                            self._send_notification(
-                                f"⚽ 进行中 {m.home_team} {m.home_score}-{m.away_score} {m.away_team}",
-                                f"{m.home_team} vs {m.away_team} · 第{m.minute or '?'}分钟"
-                            )
-                            if self._pushplus_on_goal:
-                                title, content = self._format_match_push(m, "live_catchup")
-                                self._send_pushplus(title, content)
+                self._check_notifications(matches)
 
             # Enrich matches with ET (extra time) goal counts by
             # hitting the summary endpoint for any AET match. This
@@ -3504,32 +3525,77 @@ class WorldCupOverlay(QWidget):
     # ---- Notifications ----
 
     def _check_notifications(self, new_matches: list):
-        """Detect match starts and score changes, send macOS + PushPlus notifications."""
-        live_now = {"1h", "2h", "ht", "et", "pen", "live"}
+        """Send macOS + PushPlus notifications for match events.
+
+        Logic:
+        - Match start: driven by _start_pushed set, also saves
+          _last_pushed_score so app-restart catch-up works.
+        - Match end: driven by _end_pushed set.
+        - Catch-up on app start: for live matches where prev is None
+          (first fetch after app start), compare current score with
+          _last_pushed_score; if different, send a catch-up push.
+        - Score changes (goals) detected via _prev_matches_state.
+        """
+        live_statuses = {"1h", "2h", "ht", "et", "pen", "live"}
+
         for m in new_matches:
+            # --- Catch-up: app was closed during live match ---
             prev = self._prev_matches_state.get(m.match_id)
+            if prev is None and m.status in live_statuses:
+                last = self._last_pushed_score.get(m.match_id)
+                if last is not None:
+                    # 有历史推送记录，先标记已推送，避免重复发比赛开始
+                    self._start_pushed.add(m.match_id)
+                    prev_home, prev_away = last[0], last[1]
+                    if m.home_score != prev_home or m.away_score != prev_away:
+                        # 比分在app关闭期间发生变化，补推
+                        home_delta = m.home_score - prev_home
+                        away_delta = m.away_score - prev_away
+                        self._send_notification(
+                            f"⚽ {m.home_team} {m.home_score}-{m.away_score} {m.away_team}",
+                            f"补推：比分已更新为 {m.home_score}-{m.away_score}"
+                        )
+                        if self._pushplus_on_goal:
+                            t, c = self._format_goal_push(m, home_delta, away_delta)
+                            self._send_pushplus(t, c)
+                        self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
+                        self._save_settings()
+                # If last is None: we have no record, treat as normal start below
+
+            # --- Match start notification ---
+            if m.status in live_statuses and m.match_id not in self._start_pushed:
+                self._send_notification(
+                    f"⚽ 比赛开始 · {m.home_team} vs {m.away_team}",
+                    f"已开赛 {m.minute or '?'}· {m.home_team} vs {m.away_team}" if m.minute else f"比赛开始！{m.home_team} vs {m.away_team}"
+                )
+                if self._pushplus_on_start:
+                    t, c = self._format_match_push(m, "start")
+                    self._send_pushplus(t, c)
+                self._start_pushed.add(m.match_id)
+                self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
+                self._save_settings()
+
+            # --- Match end notification ---
+            if m.status == "finished" and m.match_id not in self._end_pushed:
+                self._send_notification(
+                    f"🏁 比赛结束 · {m.home_team} vs {m.away_team}",
+                    f"最终比分：{m.home_score} - {m.away_score} · 全场比赛结束"
+                )
+                if self._pushplus_on_start:
+                    t, c = self._format_match_push(m, "end")
+                    self._send_pushplus(t, c)
+                self._end_pushed.add(m.match_id)
+                self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
+                self._save_settings()
+
+            # --- Score change notifications (only when prev exists) ---
             if prev is None:
                 continue
             prev_status, prev_home, prev_away = prev
-
-            # Match just started
-            if prev_status == "notstarted" and m.status in live_now:
-                self._send_notification(
-                    f"⚽ {m.home_team} vs {m.away_team}",
-                    "比赛开始！"
-                )
-                if self._pushplus_on_start:
-                    title, content = self._format_match_push(m, "start")
-                    self._send_pushplus(title, content)
-
-            # Score change: covers goals, VAR confirmations, score corrections,
-            # and goal cancellations. We report whatever the new score is,
-            # so the user gets accurate updates either way.
             score_changed = (m.home_score != prev_home or m.away_score != prev_away)
             if score_changed:
                 home_delta = m.home_score - prev_home
                 away_delta = m.away_score - prev_away
-                # Build a descriptive title based on delta direction
                 if home_delta > 0 and away_delta > 0:
                     title = "⚽ 比分变化"
                     delta_hint = f"（+{home_delta} / +{away_delta}）"
@@ -3548,48 +3614,54 @@ class WorldCupOverlay(QWidget):
                         parts.append(f"{m.away_team} {away_delta:+d}")
                     delta_hint = f"（{' / '.join(parts)}）"
                 else:
-                    # Shouldn't happen, but just in case
                     title = "⚽ 比分变化"
                     delta_hint = ""
-
                 self._send_notification(
                     title,
                     f"{m.home_team} {m.home_score}-{m.away_score} {m.away_team} {delta_hint}".strip()
                 )
                 if self._pushplus_on_goal:
-                    # For goal pushes we want the title to BE the action:
-                    # "X 进球 (Y分钟) 1-0" — no separate body. We use the
-                    # summary endpoint to get scorer / method (头球/点球/...).
-                    # We only do this for "real" goals (delta > 0). For
-                    # corrections (delta < 0) we fall back to the
-                    # descriptive title.
                     if home_delta > 0 or away_delta > 0:
-                        title, content = self._format_goal_push(m, home_delta, away_delta)
+                        t, c = self._format_goal_push(m, home_delta, away_delta)
                     else:
-                        title, content = self._format_match_push(
+                        t, c = self._format_match_push(
                             m, "score_change", home_delta, away_delta
                         )
-                    self._send_pushplus(title, content)
+                    self._send_pushplus(t, c)
+                self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
+                self._save_settings()
 
         # Detect whether the data actually changed vs the previous fetch.
-        # Used by the status bar to flag "stale data" when a live match's
-        # score hasn't moved for a while (e.g. football-data.org free tier
-        # doesn't always push live updates).
         data_changed = False
         for m in new_matches:
             prev = self._prev_matches_state.get(m.match_id)
             if prev is None:
-                continue
+                data_changed = True
+                break
             prev_status, prev_home, prev_away = prev
             if prev_status != m.status or prev_home != m.home_score or prev_away != m.away_score:
                 data_changed = True
                 break
-        # Also detect "first time we see this match today" as a change
-        if not data_changed and self._prev_matches_state:
-            for m in new_matches:
-                if m.match_id not in self._prev_matches_state:
-                    data_changed = True
-                    break
+        if data_changed:
+            self._last_data_change_time = time.time()
+
+        # Update prev state for next fetch
+        self._prev_matches_state = {
+            m.match_id: (m.status, m.home_score, m.away_score)
+            for m in new_matches
+        }
+
+        # Detect whether the data actually changed vs the previous fetch.
+        data_changed = False
+        for m in new_matches:
+            prev = self._prev_matches_state.get(m.match_id)
+            if prev is None:
+                data_changed = True
+                break
+            prev_status, prev_home, prev_away = prev
+            if prev_status != m.status or prev_home != m.home_score or prev_away != m.away_score:
+                data_changed = True
+                break
         if data_changed:
             self._last_data_change_time = time.time()
 
@@ -3598,6 +3670,7 @@ class WorldCupOverlay(QWidget):
             m.match_id: (m.status, m.home_score, m.away_score)
             for m in new_matches
         }
+
 
     def _send_notification(self, title: str, body: str):
         """Send a macOS system notification via osascript.
@@ -3677,11 +3750,22 @@ class WorldCupOverlay(QWidget):
                 stage_tag = f" · {stage_cn}"
 
         if kind == "start":
-            title = f"⚽ 比赛开始啦 {m.home_team} VS {m.away_team}"
+            title = f"{m.home_team} VS {m.away_team} 比赛开始"
+            if m.minute and str(m.minute) != "":
+                content = (
+                    f"已开赛 {m.minute}' · {m.home_team} vs {m.away_team}\n"
+                    f"当前比分：{m.home_score} - {m.away_score}"
+                )
+            else:
+                content = (
+                    f"比赛开始！{m.home_team} vs {m.away_team}\n"
+                    f"当前比分：{m.home_score} - {m.away_score}"
+                )
+        elif kind == "end":
+            title = f"{m.home_team} VS {m.away_team} 比赛结束"
             content = (
-                f"{m.home_team} vs {m.away_team}\n"
-                f"当前比分：{m.home_score} - {m.away_score}\n"
-                f"开球啦，快来围观 🏟"
+                f"最终比分：{m.home_score} - {m.away_score}\n"
+                f"全场比赛结束 🏁"
             )
         elif kind == "live_catchup":
             # First-load catch-up: match is already live with goals
