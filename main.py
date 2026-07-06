@@ -367,6 +367,10 @@ class Match:
     local_date: str = ""
     finished: bool = False
     has_penalties: bool = False
+    home_red: int = 0
+    home_yellow: int = 0
+    away_red: int = 0
+    away_yellow: int = 0
 
 
 # ============================================================================
@@ -976,6 +980,34 @@ class WorldCupAPI:
         home_score = self._safe_int(home.get("score"), 0)
         away_score = self._safe_int(away.get("score"), 0)
 
+        # Cards (Red/Yellow) — parse from details if available
+        home_red = 0
+        home_yellow = 0
+        away_red = 0
+        away_yellow = 0
+
+        details = comp.get("details", [])
+        if details:
+            home_id = str(home.get("id", ""))
+            away_id = str(away.get("id", ""))
+            for d in details:
+                tp_text = d.get("type", {}).get("text", "")
+                if "Card" not in tp_text:
+                    continue
+                team_id = str((d.get("team") or {}).get("id", ""))
+                is_red = "Red" in tp_text
+                is_yellow = "Yellow" in tp_text
+                if team_id == home_id:
+                    if is_red:
+                        home_red += 1
+                    elif is_yellow:
+                        home_yellow += 1
+                elif team_id == away_id:
+                    if is_red:
+                        away_red += 1
+                    elif is_yellow:
+                        away_yellow += 1
+
         # Penalties (shootout)
         home_pen = self._safe_int(home.get("shootoutScore"), 0)
         away_pen = self._safe_int(away.get("shootoutScore"), 0)
@@ -1038,6 +1070,10 @@ class WorldCupAPI:
             local_date=local_date,
             finished=(status_key == "finished"),
             has_penalties=has_pen,
+            home_red=home_red,
+            home_yellow=home_yellow,
+            away_red=away_red,
+            away_yellow=away_yellow,
         )
 
     def _fetch_for_bj_date(self, date_str_mmddyyyy: str) -> list:
@@ -2031,7 +2067,8 @@ class MatchCard(QFrame):
         in place — never destroy and recreate, which is the only way to
         avoid the macOS PyQt5 crash pattern where stale C++ widgets
         receive mouse events after deleteLater()."""
-        self.setFixedHeight(105)
+        # Don't fix height — let content (penalty/ET rows) dictate size
+        self.setMinimumHeight(120)
 
         # Brighter background for live matches
         if self.match.status in LIVE_STATUSES:
@@ -2182,6 +2219,38 @@ class MatchCard(QFrame):
 
         main_layout.addLayout(teams_row)
 
+        # --- Cards (Red/Yellow) Row ---
+        # Fixed widths on all 3 sections so every card aligns vertically
+        # across all matches. Always shown, even when zero.
+        self.cards_row = QHBoxLayout()
+        self.cards_row.setSpacing(0)
+
+        # Home team cards — fixed width, right-aligned text inside
+        self.home_cards_label = QLabel()
+        self.home_cards_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.home_cards_label.setFixedWidth(110)
+        self.home_cards_label.setStyleSheet("font-size: 20px; color: #c8c8d8;")
+        self.cards_row.addWidget(self.home_cards_label)
+
+        # VS — strictly centred, narrow fixed width
+        cards_vs = QLabel("vs")
+        cards_vs.setAlignment(Qt.AlignCenter)
+        cards_vs.setFixedWidth(36)
+        cards_vs.setStyleSheet(
+            "font-size: 16px; color: #707088; font-weight: bold;"
+        )
+        self.cards_row.addWidget(cards_vs)
+
+        # Away team cards — fixed width, left-aligned text inside
+        self.away_cards_label = QLabel()
+        self.away_cards_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.away_cards_label.setFixedWidth(110)
+        self.away_cards_label.setStyleSheet("font-size: 20px; color: #c8c8d8;")
+        self.cards_row.addWidget(self.away_cards_label)
+
+        main_layout.addLayout(self.cards_row)
+        self._update_cards_display()
+
         # --- Penalty score (if applicable) ---
         if self.match.has_penalties:
             self.penalty_row = QHBoxLayout()
@@ -2291,6 +2360,26 @@ class MatchCard(QFrame):
         }
         return styles.get(self.match.status, styles["notstarted"])
 
+    def _update_cards_display(self):
+        """Update red/yellow card labels.
+        Always visible (shows 0 when none). Plain text only (no HTML)
+        to avoid Qt rich-text crashes on macOS.
+        Format: "1🔴 2🟡" — number first, then dot.
+        Fixed-width parent labels ensure vertical alignment across all cards.
+        """
+        def _card_text(red, yellow):
+            return f"{red}🔴 {yellow}🟡"
+
+        home_txt = _card_text(self.match.home_red, self.match.home_yellow)
+        away_txt = _card_text(self.match.away_red, self.match.away_yellow)
+
+        if hasattr(self, 'home_cards_label') and self.home_cards_label:
+            self.home_cards_label.setText(home_txt)
+            self.home_cards_label.setVisible(True)
+        if hasattr(self, 'away_cards_label') and self.away_cards_label:
+            self.away_cards_label.setText(away_txt)
+            self.away_cards_label.setVisible(True)
+
     def _ensure_et_badge(self):
         """Create / show a '⏱ 加时中' badge under the score, like the
         penalty row shows for shootout results. Mirrors the existing
@@ -2387,6 +2476,9 @@ class MatchCard(QFrame):
             self.home_score_label.setText(f" {match.home_score} ")
         if self.away_score_label:
             self.away_score_label.setText(f" {match.away_score} ")
+
+        # Cards (Red/Yellow)
+        self._update_cards_display()
 
         # Flags
         self._refresh_flag(self.home_flag_label, match.home_flag)
@@ -2491,6 +2583,8 @@ class WorldCupOverlay(QWidget):
         self._has_ever_loaded = False
         self._retry_count = 0
         self._max_retries = 3
+        self._retry_countdown_timer = None
+        self._retry_countdown_remaining = 0
         self._last_known_today = get_beijing_today()
         self._prev_matches_state = {}  # match_id -> (status, home_score, away_score)
         # Matches that have already had their "比赛开始" notification sent.
@@ -2955,9 +3049,18 @@ class WorldCupOverlay(QWidget):
         self.prev_btn.clicked.connect(lambda: self._shift_date(-1))
         layout.addWidget(self.prev_btn)
 
-        self.date_label = QLabel(self._date_display())
-        self.date_label.setStyleSheet("font-size: 13px; color: #e0e0f0; font-weight: bold; padding: 0 6px;")
-        self.date_label.setAlignment(Qt.AlignCenter)
+        self.date_label = QPushButton(self._date_display())
+        self.date_label.setStyleSheet("""
+            QPushButton {
+                font-size: 13px; color: #e0e0f0; font-weight: bold;
+                padding: 0 6px; background: transparent; border: none;
+                border-radius: 4px;
+            }
+            QPushButton:hover { color: #64b5f6; background-color: rgba(100,181,246,0.1); }
+            QPushButton:pressed { color: #90caf9; background-color: rgba(100,181,246,0.2); }
+        """)
+        self.date_label.setCursor(Qt.PointingHandCursor)
+        self.date_label.clicked.connect(self._show_date_picker)
         layout.addWidget(self.date_label)
 
         self.next_btn = QPushButton("▶")
@@ -3451,15 +3554,35 @@ class WorldCupOverlay(QWidget):
         self._fetch_worker.start()
 
     def _start_bulk_fetch(self):
-        """Kick off the bulk pre-load (yesterday + today + 20 future
-        days) in a background thread. The result is delivered via
-        `_on_bulk_ready` and stored in self._bulk_cache.
+        """Kick off the bulk pre-load in a background thread.
+
+        On first startup (empty bulk cache), load the entire World Cup
+        date range (June 11 – July 20 Beijing time) so the user can
+        browse any date instantly without waiting for per-date API calls.
+
+        On subsequent startups the cache is already warm; we only
+        refresh the nearby window (today ± a few days) to pick up
+        latest scores.
         """
         if self._bulk_fetcher and self._bulk_fetcher.isRunning():
             return
+
+        today = get_beijing_today()
+
+        # First startup → load full World Cup range
+        if not self._bulk_cache:
+            today_dt = datetime.strptime(today, "%m/%d/%Y")
+            wc_start = datetime(2026, 6, 11)
+            wc_end   = datetime(2026, 7, 20)
+            past   = max(0, (today_dt - wc_start).days)
+            future = max(0, (wc_end   - today_dt).days)
+        else:
+            past   = 1
+            future = self._bulk_window_days
+
         self._bulk_fetcher = BulkFetchWorker(
-            self.api, get_beijing_today(),
-            past_days=1, future_days=self._bulk_window_days,
+            self.api, today,
+            past_days=past, future_days=future,
         )
         self._bulk_fetcher.bulk_ready.connect(self._on_bulk_ready)
         self._bulk_fetcher.finished.connect(self._on_bulk_finished)
@@ -3617,9 +3740,9 @@ class WorldCupOverlay(QWidget):
                 )
             else:
                 self.status_bar.setText(
-                    f"加载失败，5秒后第{self._retry_count}次重试..."
+                    f"加载失败，{self._retry_countdown_remaining}秒后第{self._retry_count}次重试..."
                 )
-            QTimer.singleShot(5000, self._retry_fetch)
+            self._start_retry_countdown()
         elif not success:
             if self.matches:
                 # Don't overwrite a working UI with a permanent
@@ -3627,6 +3750,34 @@ class WorldCupOverlay(QWidget):
                 self._update_status()
             else:
                 self.status_bar.setText("加载失败，请检查网络后重试")
+
+    def _start_retry_countdown(self):
+        """Start a 30-second countdown timer. Update status bar every second."""
+        self._retry_countdown_remaining = 30
+        if self._retry_countdown_timer:
+            self._retry_countdown_timer.stop()
+        self._retry_countdown_timer = QTimer(self)
+        self._retry_countdown_timer.timeout.connect(self._update_retry_countdown)
+        self._retry_countdown_timer.start(1000)
+        self._update_retry_countdown()  # immediate first update
+
+    def _update_retry_countdown(self):
+        """Update status bar with remaining seconds. Retry when reaches 0."""
+        self._retry_countdown_remaining -= 1
+        if self._retry_countdown_remaining <= 0:
+            if self._retry_countdown_timer:
+                self._retry_countdown_timer.stop()
+                self._retry_countdown_timer = None
+            self._retry_fetch()
+            return
+        if self.matches:
+            self.status_bar.setText(
+                f"⏳ 等待API恢复，第{self._retry_count}次重试 ({self._retry_countdown_remaining}s)..."
+            )
+        else:
+            self.status_bar.setText(
+                f"加载失败，{self._retry_countdown_remaining}秒后第{self._retry_count}次重试..."
+            )
 
     def _retry_fetch(self):
         # Force-bypass the rate limit window. The user just clicked
@@ -4230,7 +4381,7 @@ class WorldCupOverlay(QWidget):
 
         # Calculate height
         card_count = len(display_matches)
-        total_height = 44 + 24 + card_count * 115 + 10 + 28
+        total_height = 44 + 24 + card_count * 140 + 8 + 28
         if total_height > WINDOW_MAX_HEIGHT:
             total_height = WINDOW_MAX_HEIGHT
         elif total_height < WINDOW_MIN_HEIGHT:
@@ -4260,7 +4411,7 @@ class WorldCupOverlay(QWidget):
         self.matches_layout.addStretch(1)
 
         card = QFrame()
-        card.setFixedHeight(105)
+        card.setFixedHeight(120)
         card.setStyleSheet("""
             QFrame {
                 background-color: rgba(42, 42, 56, 210);
@@ -4278,7 +4429,7 @@ class WorldCupOverlay(QWidget):
 
         self.matches_layout.addStretch()
         self.scroll_area.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self._update_height(44 + 24 + 115 + 10 + 28)
+        self._update_height(44 + 24 + 130 + 8 + 28)
 
     def _update_height(self, height: int):
         self.resize(WINDOW_WIDTH, height)
@@ -4629,10 +4780,6 @@ class WorldCupOverlay(QWidget):
         refresh_action.triggered.connect(self._force_refresh)
         refresh_action.setEnabled(not self._is_refreshing)
         menu.addAction(refresh_action)
-
-        date_action = QAction("📅 跳转到日期", menu)
-        date_action.triggered.connect(self._show_date_picker)
-        menu.addAction(date_action)
 
         pushplus_action = QAction("📲 推送设置", menu)
         pushplus_action.triggered.connect(self._show_pushplus)
