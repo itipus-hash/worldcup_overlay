@@ -28,13 +28,22 @@ def format_cache(d):
     lines = []
     lps = d.get("last_pushed_score", {})
     end = d.get("end_pushed_ids", [])
+    ht = d.get("ht_pushed_ids", [])
+    reg_end = d.get("reg_end_pushed_ids", [])
+    et_end = d.get("et_end_pushed_ids", [])
     if lps:
         lines.append("已推送比分记录：")
         for mid, score in lps.items():
-            lines.append(f"  {mid}: {score[0]}-{score[1]}")
+            s = f"  {mid}: {score[0]}-{score[1]}"
+            if len(score) >= 4:
+                s += f"（点球 {score[2]}-{score[3]}）"
+            lines.append(s)
     else:
         lines.append("已推送比分记录：（无）")
     lines.append(f"比赛结束推送记录：{len(end)} 场")
+    lines.append(f"半场推送记录：{len(ht)} 场")
+    lines.append(f"常规结束推送记录：{len(reg_end)} 场")
+    lines.append(f"加时结束推送记录：{len(et_end)} 场")
     return "\n".join(lines)
 
 def main():
@@ -66,7 +75,11 @@ def main():
     # 检查缓存是否为空
     lps = d.get("last_pushed_score", {})
     end = d.get("end_pushed_ids", [])
-    if not lps and not end:
+    ht = d.get("ht_pushed_ids", [])
+    reg_end = d.get("reg_end_pushed_ids", [])
+    et_end = d.get("et_end_pushed_ids", [])
+    all_empty = (not lps and not end and not ht and not reg_end and not et_end)
+    if all_empty:
         print("⚠️  当前缓存已经是空的，无需清空。")
         print("\n3秒后自动关闭窗口...")
         time.sleep(3)
@@ -82,6 +95,9 @@ def main():
     print("正在清空缓存...")
     d["last_pushed_score"] = {}
     d["end_pushed_ids"] = []
+    d["ht_pushed_ids"] = []
+    d["reg_end_pushed_ids"] = []
+    d["et_end_pushed_ids"] = []
     try:
         write_settings(d)
         print("✅ 缓存已清空")

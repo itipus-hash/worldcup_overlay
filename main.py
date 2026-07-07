@@ -203,7 +203,7 @@ PLAYER_NAMES_CN = {
     "Rafael Santos Borré": "拉斐尔·桑托斯·博雷",
     "Miguel Borja": "米格尔·博尔哈",
     "Luis Suárez": "路易斯·苏亚雷斯",
-    # Argentina
+    # Argentina (expanded)
     "Lionel Messi": "里奥·梅西",
     "Lisandro Martínez": "利桑德罗·马丁内斯",
     "Alexis Mac Allister": "亚历克西斯·麦卡利斯特",
@@ -211,6 +211,29 @@ PLAYER_NAMES_CN = {
     "Lautaro Martínez": "劳塔罗·马丁内斯",
     "Ángel Di María": "安赫尔·迪马利亚",
     "Emiliano Martínez": "埃米利亚诺·马丁内斯",
+    "Cristian Romero": "克里斯蒂安·罗梅罗",
+    "Cuti Romero": "克里斯蒂安·罗梅罗",
+    "Enzo Fernández": "恩佐·费尔南德斯",
+    "Nicolás Otamendi": "尼古拉斯·奥塔门迪",
+    "Rodrigo De Paul": "罗德里戈·德保罗",
+    "Giovani Lo Celso": "乔瓦尼·洛塞尔索",
+    "Paulo Dybala": "保罗·迪巴拉",
+    "Leandro Paredes": "莱昂德罗·帕雷德斯",
+    "Nahuel Molina": "纳韦尔·莫利纳",
+    "Marcos Acuña": "马科斯·阿库尼亚",
+    "Nicolás Tagliafico": "尼古拉斯·塔利亚菲科",
+    "Germán Pezzella": "赫尔曼·佩泽拉",
+    "Exequiel Palacios": "埃塞基埃尔·帕拉西奥斯",
+    "Thiago Almada": "蒂亚戈·阿尔马达",
+    "Giovani Simeone": "乔瓦尼·西蒙尼",
+    "Nicolás González": "尼古拉斯·冈萨雷斯",
+    "Ángel Correa": "安赫尔·科雷亚",
+    "Papu Gómez": "帕普·戈麦斯",
+    "Alejandro Gómez": "帕普·戈麦斯",
+    "Juan Foyth": "胡安·福伊特",
+    "Lucas Ocampos": "卢卡斯·奥坎波斯",
+    "Nicolás Paz": "尼古拉斯·帕斯",
+    "Valentín Carboni": "瓦伦丁·卡尔博尼",
     # Egypt
     "Mohamed Salah": "穆罕默德·萨拉赫",
     "Emam Ashour": "伊马姆·阿舒尔",
@@ -294,6 +317,911 @@ PLAYER_NAMES_CN = {
     "Harry Kane": "哈里·凯恩",
     "Phil Foden": "菲尔·福登",
     "Bukayo Saka": "布卡约·萨卡",
+    # Belgium
+    "Charles De Ketelaere": "查尔斯·德凯特拉雷",
+    "Hans Vanaken": "汉斯·瓦纳肯",
+    "Romelu Lukaku": "罗梅卢·卢卡库",
+    "Kevin De Bruyne": "凯文·德布劳内",
+    "Youri Tielemans": "尤里·蒂勒曼斯",
+    "Jérémy Doku": "杰雷米·多库",
+    "Leandro Trossard": "莱昂德罗·特罗萨德",
+    "Amadou Onana": "阿马杜·奥纳纳",
+    "Axel Witsel": "阿克塞尔·维特塞尔",
+    "Thomas Meunier": "托马斯·默尼耶",
+    "Loïs Openda": "洛伊·奥彭达",
+    "Wout Faes": "沃特·法斯",
+    "Jan Vertonghen": "扬·维尔通亨",
+    # USA
+    "Malik Tillman": "马利克·蒂尔曼",
+    "Christian Pulisic": "克里斯蒂安·普利西奇",
+    "Weston McKennie": "韦斯顿·麦肯尼",
+    "Tyler Adams": "泰勒·亚当斯",
+    "Gio Reyna": "吉奥·雷纳",
+    "Tim Weah": "蒂姆·维阿",
+    "Folarin Balogun": "弗拉林·巴洛贡",
+    "Antonee Robinson": "安东尼·罗宾逊",
+    "Sergiño Dest": "塞尔吉尼奥·德斯特",
+    "Yunus Musah": "尤努斯·穆萨",
+    "Ricardo Pepi": "里卡多·佩皮",
+    # Egypt
+    "Yasser Ibrahim": "亚瑟·易卜拉欣",
+    "Mostafa Zico": "穆斯塔法·齐科",
+    "Mohamed Elneny": "穆罕默德·埃尔内尼",
+    "Omar Marmoush": "奥马尔·马尔穆什",
+    "Ahmed Hegazi": "艾哈迈德·赫加齐",
+    "Trezeguet": "特雷泽盖",
+    "Mahmoud Trezeguet": "特雷泽盖",
+    "Emam Ashour": "伊马姆·阿舒尔",
+    "Marwan Attia": "马万·阿提亚",
+    # Paraguay
+    "Miguel Almirón": "米格尔·阿尔米隆",
+    "Antonio Sanabria": "安东尼奥·萨纳布里亚",
+    # Japan
+    "Kaoru Mitoma": "三笘薫",
+    "Takefusa Kubo": "久保建英",
+    "Wataru Endo": "远藤航",
+    "Ritsu Doan": "堂安律",
+    "Takehiro Tomiyasu": "富安健洋",
+    # Uruguay
+    "Federico Valverde": "费德里科·巴尔韦德",
+    "Darwin Núñez": "达尔文·努涅斯",
+    "Ronald Araújo": "罗纳德·阿劳霍",
+    # Senegal
+    "Sadio Mané": "萨迪奥·马内",
+    "Kalidou Koulibaly": "卡利杜·库利巴利",
+    # Iran
+    "Mehdi Taremi": "迈赫迪·塔雷米",
+    "Sardar Azmoun": "萨尔达尔·阿兹蒙",
+    # Tunisia
+    "Hannibal Mejbri": "汉尼拔·梅布里",
+    "Wahbi Khazri": "瓦赫比·哈兹里",
+    # Iraq
+    "Aymen Hussein": "艾门·侯赛因",
+    # New Zealand
+    "Chris Wood": "克里斯·伍德",
+    # Sweden
+    "Alexander Isak": "亚历山大·伊萨克",
+    "Dejan Kulusevski": "德扬·库卢塞夫斯基",
+    # Panama
+    "Aníbal Godoy": "阿尼瓦尔·戈多伊",
+    # Uzbekistan
+    "Eldor Shomurodov": "埃尔多尔·肖穆罗多夫",
+    # Spain (expanded)
+    "Gavi": "加维",
+    "Pedri": "佩德里",
+    "Rodri": "罗德里",
+    "Sergio Busquets": "塞尔吉奥·布斯克茨",
+    "Marco Asensio": "马尔科·阿森西奥",
+    "Mikel Oyarzabal": "米克尔·奥亚萨瓦尔",
+    "Ferran Torres": "费兰·托雷斯",
+    "Pablo Sarabia": "巴勃罗·萨拉维亚",
+    "Aymeric Laporte": "艾梅里克·拉波尔特",
+    "Pau Torres": "保·托雷斯",
+    "Dani Carvajal": "达尼·卡瓦哈尔",
+    "Jordi Alba": "霍尔迪·阿尔巴",
+    "Iago Aspas": "伊亚戈·阿斯帕斯",
+    "Bryan Gil": "布莱恩·吉尔",
+    "Mikel Merino": "米克尔·梅里诺",
+    "Marc Cucurella": "马克·库库雷利亚",
+    "Robin Le Normand": "罗班·勒诺尔芒",
+    "Álex Baena": "亚历克斯·巴埃纳",
+    "Fermin López": "费尔明·洛佩斯",
+    # Portugal (expanded)
+    "João Félix": "若昂·菲利克斯",
+    "Rúben Dias": "鲁本·迪亚斯",
+    "Pepe": "佩佩",
+    "Raphaël Guerreiro": "拉斐尔·格雷罗",
+    "João Cancelo": "若昂·坎塞洛",
+    "Nuno Mendes": "努诺·门德斯",
+    "Vitinha": "维蒂尼亚",
+    "João Palhinha": "若昂·帕利尼亚",
+    "André Silva": "安德烈·席尔瓦",
+    "Diogo Jota": "迪奥戈·若塔",
+    "Ricardo Horta": "里卡多·奥尔塔",
+    "Francisco Conceição": "弗朗西斯科·孔塞桑",
+    "Pedro Neto": "佩德罗·内托",
+    "Pedro Gonçalves": "佩德罗·贡萨尔维斯",
+    "António Silva": "安东尼奥·席尔瓦",
+    # France (expanded)
+    "Antoine Griezmann": "安托万·格里兹曼",
+    "Ousmane Dembélé": "奥斯曼·登贝莱",
+    "Aurélien Tchouaméni": "奥雷连·丘阿梅尼",
+    "Olivier Giroud": "奥利维耶·吉鲁",
+    "Antoine Griezmann": "安托万·格里兹曼",
+    "Eduardo Camavinga": "爱德华多·卡马文加",
+    "Adrien Rabiot": "阿德里安·拉比奥",
+    "Theo Hernández": "特奥·埃尔南德斯",
+    "Dayot Upamecano": "达约特·于帕梅卡诺",
+    "Jules Koundé": "朱尔·孔德",
+    "Ibrahima Konaté": "易卜拉希马·科纳特",
+    "Lucas Hernández": "卢卡斯·埃尔南德斯",
+    "Benjamin Pavard": "邦雅曼·帕瓦尔",
+    "Marcus Thuram": "马库斯·图拉姆",
+    "Randal Kolo Muani": "兰达尔·科洛·穆阿尼",
+    "Bradley Barcola": "布拉德利·巴尔科拉",
+    "Warren Zaïre-Emery": "沃伦·扎伊尔-埃梅里",
+    "Michael Olise": "迈克尔·奥利塞",
+    # Brazil (expanded)
+    "Vinícius Júnior": "维尼修斯·儒尼奥尔",
+    "Rodrygo": "罗德里戈",
+    "Raphinha": "拉菲尼亚",
+    "Neymar": "内马尔",
+    "Neymar Jr": "内马尔",
+    "Casemiro": "卡塞米罗",
+    "Marquinhos": "马尔基尼奥斯",
+    "Éder Militão": "埃德尔·米利唐",
+    "Gabriel Magalhães": "加布里埃尔·马加良斯",
+    "Danilo": "达尼洛",
+    "Alex Sandro": "阿莱克斯·桑德罗",
+    "Alisson": "阿利松",
+    "Ederson": "埃德森",
+    "Richarlison": "里沙利松",
+    "Antony": "安东尼",
+    "Gabriel Jesus": "加布里埃尔·热苏斯",
+    "Bruno Guimarães": "布鲁诺·吉马良斯",
+    "Lucas Paquetá": "卢卡斯·帕凯塔",
+    "Éder Barboza": "埃德尔·巴博萨",
+    "Savinho": "萨维尼奥",
+    "Endrick": "恩德里克",
+    "João Pedro": "若昂·佩德罗",
+    # England (expanded)
+    "Jude Bellingham": "裘德·贝林厄姆",
+    "Harry Kane": "哈里·凯恩",
+    "Phil Foden": "菲尔·福登",
+    "Bukayo Saka": "布卡约·萨卡",
+    "Marcus Rashford": "马库斯·拉什福德",
+    "Raheem Sterling": "拉希姆·斯特林",
+    "Jack Grealish": "杰克·格里利什",
+    "Declan Rice": "德克兰·赖斯",
+    "Jadon Sancho": "杰登·桑乔",
+    "John Stones": "约翰·斯通斯",
+    "Harry Maguire": "哈里·马奎尔",
+    "Kyle Walker": "凯尔·沃克",
+    "Luke Shaw": "卢克·肖",
+    "Trent Alexander-Arnold": "特伦特·亚历山大-阿诺德",
+    "Reece James": "里斯·詹姆斯",
+    "Ben Chilwell": "本·奇尔韦尔",
+    "Jordan Pickford": "乔丹·皮克福德",
+    "Mason Mount": "梅森·芒特",
+    "Cole Palmer": "科尔·帕尔默",
+    "Eberechi Eze": "埃贝雷奇·埃泽",
+    "Ollie Watkins": "奥利·沃特金斯",
+    "Ivan Toney": "伊万·托尼",
+    "Jarrod Bowen": "贾罗德·鲍文",
+    "Anthony Gordon": "安东尼·戈登",
+    "Kobbie Mainoo": "科比·梅努",
+    # Germany
+    "Joshua Kimmich": "约书亚·基米希",
+    "Ilkay Gündoğan": "伊尔凯·京多安",
+    "Kai Havertz": "凯·哈弗茨",
+    "Leroy Sané": "莱罗·萨内",
+    "Jamal Musiala": "贾马尔·穆西亚拉",
+    "Thomas Müller": "托马斯·穆勒",
+    "Antonio Rüdiger": "安东尼奥·吕迪格",
+    "Niklas Süle": "尼克拉斯·聚勒",
+    "Florian Wirtz": "弗洛里安·维尔茨",
+    "Jonathan Tah": "乔纳森·塔",
+    "David Raum": "大卫·劳姆",
+    "Benjamin Henrichs": "本杰明·亨里克斯",
+    "Marc-André ter Stegen": "马克-安德烈·特尔施特根",
+    "Niclas Füllkrug": "尼古拉斯·菲尔克鲁格",
+    "Maximilian Beier": "马克西米利安·拜尔",
+    "Deniz Undav": "德尼兹·翁达夫",
+    # Netherlands
+    "Virgil van Dijk": "维尔吉尔·范迪克",
+    "Frenkie de Jong": "弗伦基·德容",
+    "Memphis Depay": "孟菲斯·德佩",
+    "Cody Gakpo": "科迪·加克波",
+    "Denzel Dumfries": "邓泽尔·邓弗里斯",
+    "Matthijs de Ligt": "马泰斯·德里赫特",
+    "Nathan Aké": "内森·阿克",
+    "Tyrell Malacia": "泰雷尔·马拉西亚",
+    "Stefan de Vrij": "斯特凡·德弗里",
+    "Davy Klaassen": "戴维·克拉森",
+    "Wout Weghorst": "沃特·韦格霍斯特",
+    "Steven Berghuis": "斯蒂芬·伯格休斯",
+    "Xavi Simons": "哈维·西蒙斯",
+    "Tijjani Reijnders": "蒂贾尼·莱因德斯",
+    "Joey Veerman": "乔伊·费尔曼",
+    "Brian Brobbey": "布莱恩·布罗比",
+    "Jeremie Frimpong": "杰里米·弗里蓬",
+    "Quinten Timber": "昆滕·廷伯",
+    # Italy
+    "Federico Chiesa": "费德里科·基耶萨",
+    "Nicolò Barella": "尼科洛·巴雷拉",
+    "Jorginho": "若日尼奥",
+    "Leonardo Bonucci": "莱昂纳多·博努奇",
+    "Giorgio Chiellini": "乔治·基耶利尼",
+    "Gianluigi Donnarumma": "吉安路易吉·多纳鲁马",
+    "Ciro Immobile": "奇罗·因莫比莱",
+    "Lorenzo Insigne": "洛伦佐·因西涅",
+    "Manuel Locatelli": "曼努埃尔·洛卡特利",
+    "Sandro Tonali": "桑德罗·托纳利",
+    "Alessandro Bastoni": "亚历山德罗·巴斯托尼",
+    "Giacomo Raspadori": "贾科莫·拉斯帕多里",
+    "Wilfried Gnonto": "威尔弗里德·尼奥托",
+    "Mateo Retegui": "马特奥·雷特吉",
+    "Davide Frattesi": "达维德·弗拉泰西",
+    # Colombia (expanded)
+    "Jhon Arias": "霍恩·阿里亚斯",
+    "Luis Díaz": "路易斯·迪亚斯",
+    "James Rodríguez": "哈梅斯·罗德里格斯",
+    "Rafael Santos Borré": "拉斐尔·桑托斯·博雷",
+    "Miguel Borja": "米格尔·博尔哈",
+    "Luis Suárez": "路易斯·苏亚雷斯",
+    "Davinson Sánchez": "达文森·桑切斯",
+    "Yerry Mina": "耶里·米纳",
+    "Daniel Muñoz": "丹尼尔·穆尼奥斯",
+    "Juan Cuadrado": "胡安·夸德拉多",
+    "Juan Fernando Quintero": "胡安·费尔南多·金特罗",
+    "Mateus Uribe": "马特乌斯·乌里韦",
+    "Wilmar Barrios": "威尔马尔·巴里奥斯",
+    "Richard Ríos": "理查德·里奥斯",
+    "Jefferson Lerma": "杰斐逊·勒马",
+    "Jhon Córdoba": "霍恩·科尔多瓦",
+    "Santiago Arias": "圣地亚哥·阿里亚斯",
+    "Carlos Cuesta": "卡洛斯·奎斯塔",
+    # Egypt (expanded)
+    "Mohamed Salah": "穆罕默德·萨拉赫",
+    "Emam Ashour": "伊马姆·阿舒尔",
+    "Karim Hafez": "卡里姆·哈菲兹",
+    "Mohamed Hany": "穆罕默德·哈尼",
+    "Mahmoud Saber": "马哈茂德·萨比尔",
+    "Ramy Rabia": "拉米·拉比亚",
+    "Hossam Abdelmaguid": "霍萨姆·阿卜杜勒马吉德",
+    "Marwan Attia": "马万·阿提亚",
+    "Yasser Ibrahim": "亚瑟·易卜拉欣",
+    "Mostafa Zico": "穆斯塔法·齐科",
+    "Mohamed Elneny": "穆罕默德·埃尔内尼",
+    "Omar Marmoush": "奥马尔·马尔穆什",
+    "Ahmed Hegazi": "艾哈迈德·赫加齐",
+    "Trezeguet": "特雷泽盖",
+    "Mahmoud Trezeguet": "特雷泽盖",
+    "Ahmed Hassan": "艾哈迈德·哈桑",
+    "Mohamed Sherif": "穆罕默德·谢里夫",
+    "Mostafa Mohamed": "穆斯塔法·穆罕默德",
+    "Imam Ashour": "伊马姆·阿舒尔",
+    "Ahmed Sayed": "艾哈迈德·赛义德",
+    "Zizo": "齐佐",
+    "Emam Ashour": "伊马姆·阿舒尔",
+    # USA (expanded)
+    "Malik Tillman": "马利克·蒂尔曼",
+    "Christian Pulisic": "克里斯蒂安·普利西奇",
+    "Weston McKennie": "韦斯顿·麦肯尼",
+    "Tyler Adams": "泰勒·亚当斯",
+    "Gio Reyna": "吉奥·雷纳",
+    "Tim Weah": "蒂姆·维阿",
+    "Folarin Balogun": "弗拉林·巴洛贡",
+    "Antonee Robinson": "安东尼·罗宾逊",
+    "Sergiño Dest": "塞尔吉尼奥·德斯特",
+    "Yunus Musah": "尤努斯·穆萨",
+    "Ricardo Pepi": "里卡多·佩皮",
+    "Matt Turner": "马特·特纳",
+    "Walker Zimmerman": "沃克·齐默尔曼",
+    "Sergiño Dest": "塞尔吉尼奥·德斯特",
+    "Gio Reyna": "吉奥·雷纳",
+    "Brenden Aaronson": "布伦登·阿伦森",
+    "Josh Sargent": "乔什·萨金特",
+    "Haji Wright": "哈吉·赖特",
+    "Jesus Ferreira": "赫苏斯·费雷拉",
+    "Joe Scally": "乔·斯卡利",
+    "Chris Richards": "克里斯·理查兹",
+    "Cameron Carter-Vickers": "卡梅隆·卡特-维克斯",
+    "Austin Trusty": "奥斯汀·特拉斯蒂",
+    "Marlon Fossey": "马龙·福西",
+    "Kristoffer Lund": "克里斯托弗·伦德",
+    "Mark McKenzie": "马克·麦肯齐",
+    "Paxten Aaronson": "帕克斯滕·阿伦森",
+    "Kevin Paredes": "凯文·帕雷德斯",
+    # Japan (expanded)
+    "Kaoru Mitoma": "三笘薫",
+    "Takefusa Kubo": "久保建英",
+    "Wataru Endo": "远藤航",
+    "Ritsu Doan": "堂安律",
+    "Takehiro Tomiyasu": "富安健洋",
+    "Daichi Kamada": "镰田大地",
+    "Junya Ito": "伊东纯也",
+    "Hidemasa Morita": "守田英正",
+    "Ko Itakura": "板仓滉",
+    "Maya Yoshida": "吉田麻也",
+    "Hiroki Ito": "伊藤洋辉",
+    "Takehiro Tomiyasu": "富安健洋",
+    "Ayase Ueda": "上田绮世",
+    "Takumi Minamino": "南野拓实",
+    "Hiroki Sakai": "酒井宏树",
+    "Shuichi Gonda": "权田修一",
+    "Ao Tanaka": "田中碧",
+    "Reo Hatate": "旗手怜央",
+    "Ryo Miyaichi": "宫市亮",
+    "Yuki Soma": "相马勇纪",
+    "Shogo Taniguchi": "谷口彰悟",
+    "Wataru Endo": "远藤航",
+    "Takuma Asano": "浅野拓磨",
+    "Daizen Maeda": "前田大然",
+    # Uruguay (expanded)
+    "Federico Valverde": "费德里科·巴尔韦德",
+    "Darwin Núñez": "达尔文·努涅斯",
+    "Ronald Araújo": "罗纳德·阿劳霍",
+    "Sergio Rochet": "塞尔吉奥·罗切特",
+    "José María Giménez": "何塞·玛丽亚·希门尼斯",
+    "Sebastián Coates": "塞巴斯蒂安·科阿特斯",
+    "Mathías Olivera": "马蒂亚斯·奥利韦拉",
+    "Matías Viña": "马蒂亚斯·维尼亚",
+    "Manuel Ugarte": "曼努埃尔·乌加特",
+    "Nicolás de la Cruz": "尼古拉斯·德拉克鲁斯",
+    "Rodrigo Bentancur": "罗德里戈·本坦库尔",
+    "Giorgian de Arrascaeta": "乔治安·德阿拉斯卡埃塔",
+    "Facundo Pellistri": "法昆多·佩利斯特里",
+    "Maxi Araújo": "马克西·阿劳霍",
+    "Brian Rodríguez": "布莱恩·罗德里格斯",
+    "Lucas de los Santos": "卢卡斯·德洛斯桑托斯",
+    # Morocco (expanded)
+    "Achraf Hakimi": "阿什拉夫·哈基米",
+    "Hakim Ziyech": "哈基姆·齐耶赫",
+    "Youssef En-Nesyri": "优素福·恩内斯里",
+    "Romain Saïss": "罗曼·赛斯",
+    "Nayef Aguerd": "纳耶夫·阿格尔德",
+    "Achraf Dari": "阿什拉夫·达里",
+    "Jawad El Yamiq": "贾瓦德·亚米克",
+    "Sofyan Amrabat": "索菲扬·阿姆拉巴特",
+    "Azzedine Ounahi": "阿泽丁·奥纳希",
+    "Selim Amallah": "塞利姆·阿马拉",
+    "Sofiane Boufal": "索菲安·布法尔",
+    "Zakaria Aboukhlal": "扎卡里亚·阿布赫拉勒",
+    "Walid Cheddira": "瓦利德·切迪拉",
+    "Brahim Díaz": "卜拉欣·迪亚斯",
+    "Abdelhamid Sabiri": "阿卜杜勒哈米德·萨比里",
+    "Yahya Jabrane": "叶海亚·贾布拉内",
+    "Munir Mohamedi": "穆尼尔·穆罕默迪",
+    # Mexico (expanded)
+    "Hirving Lozano": "欧文·洛萨诺",
+    "Santiago Giménez": "圣地亚哥·希门尼斯",
+    "Guillermo Ochoa": "吉列尔莫·奥乔亚",
+    "Jorge Sánchez": "豪尔赫·桑切斯",
+    "César Montes": "塞萨尔·蒙特斯",
+    "Johan Vásquez": "约翰·巴斯克斯",
+    "Edson Álvarez": "埃德森·阿尔瓦雷斯",
+    "Luis Chávez": "路易斯·查韦斯",
+    "Carlos Rodríguez": "卡洛斯·罗德里格斯",
+    "Orbelín Pineda": "奥韦林·皮内达",
+    "Alexis Vega": "亚历克西斯·维加",
+    "Raúl Jiménez": "劳尔·希门尼斯",
+    "Henry Martín": "亨利·马丁",
+    "Roberto Alvarado": "罗伯托·阿尔瓦拉多",
+    "Uriel Antuna": "乌列尔·安图尼亚",
+    "Érick Sánchez": "埃里克·桑切斯",
+    "Jesús Gallardo": "赫苏斯·加利亚多",
+    # Croatia (expanded)
+    "Luka Modrić": "卢卡·莫德里奇",
+    "Ivan Perišić": "伊万·佩里西奇",
+    "Joško Gvardiol": "约斯科·格瓦迪奥尔",
+    "Marcelo Brozović": "马塞洛·布罗佐维奇",
+    "Mateo Kovačić": "马特奥·科瓦契奇",
+    "Andrej Kramarić": "安德烈·克拉马里奇",
+    "Mario Pašalić": "马里奥·帕沙利奇",
+    "Borna Sosa": "博尔纳·索萨",
+    "Domagoj Vida": "多马戈伊·维达",
+    "Dejan Lovren": "德扬·洛夫伦",
+    "Josip Brekalo": "约西普·布雷卡洛",
+    "Bruno Petković": "布鲁诺·佩特科维奇",
+    "Ante Budimir": "安特·布迪米尔",
+    "Marko Livaja": "马尔科·利瓦亚",
+    "Ivan Rakitić": "伊万·拉基蒂奇",
+    "Lovro Majer": "洛夫罗·马耶尔",
+    "Martin Erlić": "马丁·埃尔利奇",
+    "Josip Stanišić": "约西普·斯塔尼希奇",
+    # Switzerland (expanded)
+    "Breel Embolo": "布雷尔·恩博洛",
+    "Xherdan Shaqiri": "哲尔丹·沙奇里",
+    "Granit Xhaka": "格拉尼特·扎卡",
+    "Manuel Akanji": "曼努埃尔·阿坎吉",
+    "Ricardo Rodríguez": "里卡多·罗德里格斯",
+    "Fabian Schär": "法比安·舍尔",
+    "Nico Elvedi": "尼科·埃尔韦迪",
+    "Remo Freuler": "雷莫·弗罗伊勒",
+    "Denis Zakaria": "丹尼斯·扎卡里亚",
+    "Steven Zuber": "史蒂文·祖贝尔",
+    "Renato Steffen": "雷纳托·斯特芬",
+    "Haris Seferović": "哈里斯·塞费罗维奇",
+    "Noah Okafor": "诺亚·奥卡福",
+    "Ruben Vargas": "鲁本·巴尔加斯",
+    "Silvan Widmer": "西尔万·威德默",
+    "Jordan Lotomba": "乔丹·洛通巴",
+    "Gregor Kobel": "格雷戈尔·科贝尔",
+    "Zeki Amdouni": "泽基·阿姆杜尼",
+    "Dan Ndoye": "丹·恩多耶",
+    # Austria (expanded)
+    "Marko Arnautović": "马尔科·阿瑙托维奇",
+    "David Alaba": "大卫·阿拉巴",
+    "Marcel Sabitzer": "马塞尔·萨比策",
+    "Konrad Laimer": "康拉德·莱默",
+    "Nicolas Seiwald": "尼古拉斯·赛瓦尔德",
+    "Florian Grillitsch": "弗洛里安·格里利奇",
+    "Stefan Posch": "斯特凡·波施",
+    "Philipp Lienhart": "菲利普·林哈特",
+    "Kevin Danso": "凯文·丹索",
+    "Maximilian Wöber": "马克西米利安·韦伯",
+    "Christoph Baumgartner": "克里斯托夫·鲍姆加特纳",
+    "Patrick Wimmer": "帕特里克·维默",
+    "Michael Gregoritsch": "迈克尔·格雷戈里奇",
+    "Romano Schmid": "罗马诺·施密德",
+    "Andreas Weimann": "安德烈亚斯·魏曼",
+    "Sasa Kalajdzic": "萨沙·卡拉季奇",
+    "Karim Onisiwo": "卡里姆·奥尼西沃",
+    # Senegal (expanded)
+    "Sadio Mané": "萨迪奥·马内",
+    "Kalidou Koulibaly": "卡利杜·库利巴利",
+    "Édouard Mendy": "爱德华·门迪",
+    "Idrissa Gueye": "伊德里萨·盖耶",
+    "Cheikhou Kouyaté": "谢胡·库亚特",
+    "Boulaye Dia": "布莱·迪亚",
+    "Ismaila Sarr": "伊斯梅拉·萨尔",
+    "Habib Diallo": "哈比卜·迪亚洛",
+    "Krépin Diatta": "克雷潘·迪亚塔",
+    "Pape Matar Sarr": "帕普·马塔尔·萨尔",
+    "Pape Gueye": "帕普·盖耶",
+    "Nampalys Mendy": "南帕利斯·门迪",
+    "Youssouf Sabaly": "优素福·萨巴利",
+    "Fodé Ballo-Touré": "福代·巴洛-图雷",
+    "Abdou Diallo": "阿卜杜·迪亚洛",
+    "Moussa Niakhaté": "穆萨·尼亚卡特",
+    "Bamba Dieng": "班巴·迪昂",
+    "Iliman Ndiaye": "伊利曼·恩迪亚耶",
+    "Nicolas Jackson": "尼古拉斯·杰克逊",
+    "Pape Sakho": "帕普·萨科",
+    # Australia (expanded)
+    "Harry Souttar": "哈里·索塔尔",
+    "Jackson Irvine": "杰克逊·欧文",
+    "Awer Mabil": "阿维尔·马比尔",
+    "Lucas Herrington": "卢卡斯·赫灵顿",
+    "Craig Goodwin": "克雷格·古德温",
+    "Mathew Leckie": "马修·莱基",
+    "Aaron Mooy": "亚伦·穆伊",
+    "Mathew Ryan": "马修·瑞安",
+    "Aziz Behich": "阿齐兹·贝希奇",
+    "Milos Degenek": "米洛斯·德格内克",
+    "Kye Rowles": "凯·罗尔斯",
+    "Thomas Deng": "托马斯·邓",
+    "Riley McGree": "莱利·麦格里",
+    "Ajdin Hrustic": "阿伊丁·赫鲁斯蒂奇",
+    "Mitchell Duke": "米切尔·杜克",
+    "Jamie Maclaren": "杰米·麦克拉伦",
+    "Daniel Arzani": "丹尼尔·阿尔扎尼",
+    "Garang Kuol": "加朗·库奥尔",
+    "Marco Tilio": "马尔科·蒂利奥",
+    "Nathaniel Atkinson": "纳撒尼尔·阿特金森",
+    "Jordan Bos": "乔丹·博斯",
+    "Alessandro Circati": "亚历山德罗·奇尔卡蒂",
+    # Ghana (expanded)
+    "Marvin Senaya": "马尔文·塞纳亚",
+    "Alidu Seidu": "阿里杜·塞杜",
+    "Mohammed Kudus": "穆罕默德·库杜斯",
+    "André Ayew": "安德烈·阿尤",
+    "Jordan Ayew": "乔丹·阿尤",
+    "Thomas Partey": "托马斯·帕尔特伊",
+    "Mohammed Salisu": "穆罕默德·萨利苏",
+    "Alexander Djiku": "亚历山大·吉库",
+    "Daniel Amartey": "丹尼尔·阿马泰",
+    "Gideon Mensah": "吉迪恩·门萨",
+    "Tariq Lamptey": "塔里克·兰普泰",
+    "Baba Rahman": "巴巴·拉赫曼",
+    "Elisha Owusu": "埃利沙·奥乌苏",
+    "Mohammed Kudus": "穆罕默德·库杜斯",
+    "Kamaldeen Sulemana": "卡马尔德恩·苏莱马纳",
+    "Antoine Semenyo": "安托万·塞梅尼奥",
+    "Inaki Williams": "伊纳基·威廉姆斯",
+    "Ernest Nuamah": "欧内斯特·努阿马",
+    "Jordan Ayew": "乔丹·阿尤",
+    "Lawrence Ati-Zigi": "劳伦斯·阿蒂-齐吉",
+    "Joseph Wollacott": "约瑟夫·沃拉科特",
+    "Abdul Fatawu Issahaku": "阿卜杜勒·法塔武·伊萨哈库",
+    # Belgium (expanded)
+    "Charles De Ketelaere": "查尔斯·德凯特拉雷",
+    "Hans Vanaken": "汉斯·瓦纳肯",
+    "Romelu Lukaku": "罗梅卢·卢卡库",
+    "Kevin De Bruyne": "凯文·德布劳内",
+    "Youri Tielemans": "尤里·蒂勒曼斯",
+    "Jérémy Doku": "杰雷米·多库",
+    "Leandro Trossard": "莱昂德罗·特罗萨德",
+    "Amadou Onana": "阿马杜·奥纳纳",
+    "Axel Witsel": "阿克塞尔·维特塞尔",
+    "Thomas Meunier": "托马斯·默尼耶",
+    "Loïs Openda": "洛伊·奥彭达",
+    "Wout Faes": "沃特·法斯",
+    "Jan Vertonghen": "扬·维尔通亨",
+    "Thibaut Courtois": "蒂博·库尔图瓦",
+    "Koen Casteels": "科恩·卡斯特尔斯",
+    "Zeno Debast": "泽诺·德巴斯特",
+    "Arthur Vermeeren": "亚瑟·维尔梅伦",
+    "Orel Mangala": "奥雷尔·曼加拉",
+    "Aster Vranckx": "阿斯特·弗兰克斯",
+    "Dodi Lukebakio": "多迪·卢克巴基奥",
+    "Yannick Carrasco": "扬尼克·卡拉斯科",
+    "Wout Weghorst": "沃特·韦格霍斯特",
+    "Timothy Castagne": "蒂莫西·卡斯塔涅",
+    "Thomas Kaminski": "托马斯·卡明斯基",
+    "Matz Sels": "马茨·塞尔斯",
+    "Maxim De Cuyper": "马克西姆·德凯珀",
+    # Iran (expanded)
+    "Mehdi Taremi": "迈赫迪·塔雷米",
+    "Sardar Azmoun": "萨尔达尔·阿兹蒙",
+    "Alireza Jahanbakhsh": "阿里雷扎·贾汉巴赫什",
+    "Saeid Ezatolahi": "赛义德·埃扎托拉希",
+    "Alireza Beiranvand": "阿里雷扎·贝兰万德",
+    "Ehsan Hajsafi": "伊桑·哈吉萨菲",
+    "Ramin Rezaeian": "拉明·雷扎伊安",
+    "Majid Hosseini": "马吉德·侯赛尼",
+    "Shojae Khalilzadeh": "舒贾埃·哈利勒扎德",
+    "Sadegh Moharrami": "萨德格·莫哈拉米",
+    "Milad Mohammadi": "米拉德·穆罕默迪",
+    "Ahmad Nourollahi": "艾哈迈德·努罗拉希",
+    "Karim Ansarifard": "卡里姆·安萨里法德",
+    "Saman Ghoddos": "萨曼·古多斯",
+    "Amir Abedzadeh": "阿米尔·阿贝扎德",
+    "Payam Niazmand": "帕亚姆·尼亚兹曼德",
+    "Omid Noorafkan": "奥米德·努拉夫坎",
+    "Allahyar Sayyadmanesh": "阿拉亚尔·萨亚德马内什",
+    "Mohammad Mohebi": "穆罕默德·莫赫比",
+    "Reza Shekari": "雷扎·谢卡里",
+    # Tunisia (expanded)
+    "Hannibal Mejbri": "汉尼拔·梅布里",
+    "Wahbi Khazri": "瓦赫比·哈兹里",
+    "Aïssa Laïdouni": "艾萨·莱杜尼",
+    "Ellyes Skhiri": "埃利耶斯·斯基里",
+    "Hannibal Mejbri": "汉尼拔·梅布里",
+    "Aymen Dahmen": "艾门·达门",
+    "Dylan Bronn": "迪伦·布龙",
+    "Montassar Talbi": "蒙塔萨尔·塔尔比",
+    "Yassine Meriah": "亚辛·梅里亚",
+    "Ali Abdi": "阿里·阿卜迪",
+    "Wajdi Kechrida": "瓦吉迪·凯赫里达",
+    "Hamza Rafia": "哈姆扎·拉菲亚",
+    "Ghailene Chaalali": "盖莱内·沙拉利",
+    "Anis Ben Slimane": "阿尼斯·本·斯利曼",
+    "Naïm Sliti": "纳伊姆·斯利蒂",
+    "Youssef Msakni": "优素福·姆萨克尼",
+    "Seifeddine Jaziri": "赛义夫丁·贾齐里",
+    "Issam Jebali": "伊萨姆·杰巴利",
+    "Aymen Harzi": "艾门·哈尔齐",
+    # South Korea
+    "Son Heung-min": "孙兴慜",
+    "Kim Min-jae": "金玟哉",
+    "Hwang Hee-chan": "黄喜灿",
+    "Lee Kang-in": "李刚仁",
+    "Hwang In-beom": "黄仁范",
+    "Kim Jin-su": "金珍洙",
+    "Kim Young-gwon": "金英权",
+    "Cho Gue-sung": "曹圭成",
+    "Lee Jae-sung": "李在城",
+    "Kang Sung-yoon": "姜成允",
+    "Hwang Ui-jo": "黄义助",
+    "Na Sang-ho": "罗相镐",
+    "Paik Seung-ho": "白胜浩",
+    "Hong Hyun-seok": "洪贤锡",
+    "Jeong Woo-yeong": "郑优营",
+    "Oh Hyun-gyu": "吴贤揆",
+    "Lee Ki-je": "李基济",
+    "Kim Tae-hwan": "金太焕",
+    "Kim Seung-gyu": "金承奎",
+    "Song Bum-keun": "宋范根",
+    "Cho Young-wook": "曹永旭",
+    "Yang Hyun-jun": "梁铉俊",
+    "Bae Jun-ho": "裴俊浩",
+    # Denmark
+    "Christian Eriksen": "克里斯蒂安·埃里克森",
+    "Pierre-Emile Højbjerg": "皮埃尔-埃米尔·霍伊别尔",
+    "Kasper Schmeichel": "卡斯帕·舒梅切尔",
+    "Andreas Christensen": "安德烈亚斯·克里斯滕森",
+    "Joakim Mæhle": "约阿基姆·梅勒",
+    "Joachim Andersen": "约阿希姆·安德森",
+    "Mikkel Damsgaard": "米克尔·达姆斯高",
+    "Andreas Skov Olsen": "安德烈亚斯·斯科夫·奥尔森",
+    "Jesper Lindstrøm": "杰斯珀·林德斯特伦",
+    "Kasper Dolberg": "卡斯帕·多尔贝格",
+    "Jonas Wind": "约纳斯·温德",
+    "Yussuf Poulsen": "尤素福·波尔森",
+    "Mathias Jensen": "马蒂亚斯·延森",
+    "Thomas Delaney": "托马斯·德莱尼",
+    "Christian Nørgaard": "克里斯蒂安·诺尔高",
+    "Victor Nelsson": "维克托·尼尔松",
+    "Rasmus Kristensen": "拉斯穆斯·克里斯滕森",
+    "Mads Mikkelsen": "马兹·米克尔森",
+    "Mikkel Andersen": "米克尔·安德森",
+    "Morten Hjulmand": "莫滕·尤尔曼德",
+    # Poland
+    "Robert Lewandowski": "罗伯特·莱万多夫斯基",
+    "Piotr Zieliński": "皮奥特·齐林斯基",
+    "Wojciech Szczęsny": "沃伊切赫·什琴斯尼",
+    "Jan Bednarek": "扬·贝德纳雷克",
+    "Kamil Glik": "卡米尔·格利克",
+    "Jakub Kiwior": "雅库布·基维奥尔",
+    "Nicola Zalewski": "尼古拉·扎莱夫斯基",
+    "Matty Cash": "马蒂·卡什",
+    "Grzegorz Krychowiak": "格热戈日·克雷霍维亚克",
+    "Sebastian Szymański": "塞巴斯蒂安·希曼斯基",
+    "Krzysztof Piątek": "克里斯托弗·皮亚特克",
+    "Karol Świderski": "卡罗尔·希维德尔斯基",
+    "Arkadiusz Milik": "阿尔卡迪乌什·米利克",
+    "Przemysław Frankowski": "普热梅斯瓦夫·弗兰科夫斯基",
+    "Szymon Żurkowski": "希蒙·茹尔科夫斯基",
+    "Damian Szymański": "达米安·希曼斯基",
+    "Krzysztof Krawczyk": "克里斯托弗·克拉夫奇克",
+    # Ukraine
+    "Andriy Yarmolenko": "安德烈·亚尔莫连科",
+    "Roman Yaremchuk": "罗曼·亚列姆丘克",
+    "Oleksandr Zinchenko": "亚历山大·津琴科",
+    "Mykola Shaparenko": "尼古拉·沙帕连科",
+    "Ruslan Malinovskyi": "鲁斯兰·马利诺夫斯基",
+    "Andriy Lunin": "安德烈·卢宁",
+    "Illia Zabarnyi": "伊利亚·扎巴尔尼",
+    "Vitaliy Mykolenko": "维塔利·米科连科",
+    "Oleksandr Karavaev": "亚历山大·卡拉瓦耶夫",
+    "Mykola Matviyenko": "尼古拉·马特维延科",
+    "Oleksandr Tymchyk": "亚历山大·季姆奇克",
+    "Taras Stepanenko": "塔拉斯·斯捷潘年科",
+    "Yukhym Konoplya": "尤希姆·科诺普利亚",
+    "Viktor Tsyhankov": "维克托·齐汉科夫",
+    "Mykhailo Mudryk": "米哈伊洛·穆德里克",
+    "Dovbyk": "多夫比克",
+    "Artem Dovbyk": "阿尔乔姆·多夫比克",
+    "Heorhiy Sudakov": "格奥尔基·苏达科夫",
+    "Oleksandr Zubkov": "亚历山大·祖布科夫",
+    "Vladyslav Vanat": "弗拉迪斯拉夫·瓦纳特",
+    # Serbia
+    "Aleksandar Mitrović": "亚历山大·米特罗维奇",
+    "Dušan Vlahović": "杜尚·弗拉霍维奇",
+    "Aleksandar Mitrović": "亚历山大·米特罗维奇",
+    "Dušan Tadić": "杜尚·塔迪奇",
+    "Sergej Milinković-Savić": "谢尔盖·米林科维奇-萨维奇",
+    "Nikola Milenković": "尼古拉·米伦科维奇",
+    "Strahinja Pavlović": "斯特拉希尼亚·帕夫洛维奇",
+    "Filip Kostić": "菲利普·科斯蒂奇",
+    "Andrija Živković": "安德里亚·日夫科维奇",
+    "Nemanja Gudelj": "内马尼亚·古德利",
+    "Sasa Lukic": "萨沙·卢基奇",
+    "Filip Mladenović": "菲利普·姆拉德诺维奇",
+    "Milan Pavkov": "米兰·帕夫科夫",
+    "Luka Jović": "卢卡·约维奇",
+    "Filip Djuričić": "菲利普·朱里契奇",
+    "Nemanja Radonjić": "内马尼亚·拉东吉奇",
+    "Darko Lazović": "达尔科·拉佐维奇",
+    "Strahinja Eraković": "斯特拉希尼亚·埃拉科维奇",
+    "Predrag Rajković": "普雷德拉格·拉伊科维奇",
+    # Costa Rica
+    "Keylor Navas": "凯洛尔·纳瓦斯",
+    "Joel Campbell": "乔尔·坎贝尔",
+    "Celso Borges": "塞尔索·博尔赫斯",
+    "Bryan Ruiz": "布莱恩·鲁伊斯",
+    "Francisco Calvo": "弗朗西斯科·卡尔沃",
+    "Yeltsin Tejeda": "耶尔钦·特赫达",
+    "Óscar Duarte": "奥斯卡·杜阿尔特",
+    "Kendall Waston": "肯德尔·沃斯顿",
+    "Jewison Bennette": "朱维森·贝内特",
+    "Anthony Contreras": "安东尼·孔特雷拉斯",
+    "Gerson Torres": "赫森·托雷斯",
+    "Juan Pablo Vargas": "胡安·巴勃罗·巴尔加斯",
+    "Carlos Mora": "卡洛斯·莫拉",
+    "Keysher Fuller": "凯谢尔·富勒",
+    "Ronald Matarrita": "罗纳德·马塔里塔",
+    "Leonel Moreira": "莱昂内尔·莫雷拉",
+    "Esteban Alvarado": "埃斯特万·阿尔瓦拉多",
+    "Patrick Sequeira": "帕特里克·塞凯拉",
+    # Ecuador
+    "Enner Valencia": "恩纳·瓦伦西亚",
+    "Moisés Caicedo": "莫伊塞斯·凯塞多",
+    "Pervis Estupiñán": "佩尔维斯·埃斯图皮尼安",
+    "Piero Hincapié": "皮耶罗·辛卡皮耶",
+    "Ángelo Preciado": "安杰洛·普雷西亚多",
+    "Félix Torres": "费利克斯·托雷斯",
+    "Jackson Porozo": "杰克逊·波罗佐",
+    "Diego Palacios": "迭戈·帕拉西奥斯",
+    "Gonzalo Plata": "贡萨洛·普拉塔",
+    "Romario Ibarra": "罗马里奥·伊瓦拉",
+    "Michael Estrada": "迈克尔·埃斯特拉达",
+    "Ayrton Preciado": "艾尔顿·普雷西亚多",
+    "José Cifuentes": "何塞·西富恩特斯",
+    "Sebastián Méndez": "塞巴斯蒂安·门德斯",
+    "Alan Franco": "阿兰·弗兰科",
+    "Jeremy Sarmiento": "杰里米·萨尔米恩托",
+    "Kendry Páez": "肯德里·帕埃斯",
+    "Kevin Rodríguez": "凯文·罗德里格斯",
+    "Leonardo Campana": "莱昂纳多·坎帕纳",
+    "Hernán Galíndez": "埃尔南·加林德斯",
+    # Cameroon
+    "Vincent Aboubakar": "文森特·阿布巴卡尔",
+    "Karl Toko Ekambi": "卡尔·托科·埃坎比",
+    "André Onana": "安德烈·奥纳纳",
+    "Eric Maxim Choupo-Moting": "埃里克·马克西姆·舒波-莫廷",
+    "André-Frank Zambo Anguissa": "安德烈-弗兰克·赞博·安古伊萨",
+    "Bryan Mbeumo": "布莱恩·姆贝乌莫",
+    "Jean-Charles Castelletto": "让-查尔斯·卡斯特莱托",
+    "Nouhou Tolo": "努胡·托洛",
+    "Oumar Gonzalez": "乌马尔·冈萨雷斯",
+    "Enzo Ebosse": "恩佐·埃博塞",
+    "Christopher Wooh": "克里斯托弗·沃",
+    "Pierre Kunde": "皮埃尔·孔德",
+    "Martin Hongla": "马丁·洪格拉",
+    "Olivier Kemen": "奥利维尔·凯门",
+    "Samuel Gouet": "萨米尔·古埃",
+    "Georges-Kévin Nkoudou": "乔治-凯文·恩库杜",
+    "Karl Namnganda": "卡尔·南甘达",
+    "Didier Lamkel Zé": "迪迪埃·拉姆克尔·泽",
+    "Souaibou Marou": "苏瓦伊布·马鲁",
+    "Davis Epassy": "戴维斯·埃帕西",
+    # Saudi Arabia
+    "Salem Al-Dawsari": "萨勒姆·达瓦萨里",
+    "Saud Abdulhamid": "萨乌德·阿卜杜勒哈米德",
+    "Salman Al-Faraj": "萨尔曼·法拉杰",
+    "Yasser Al-Shahrani": "亚塞尔·沙赫拉尼",
+    "Ali Al-Bulaihi": "阿里·布莱希",
+    "Mohamed Kanno": "穆罕默德·坎诺",
+    "Abdullah Otayf": "阿卜杜拉·奥泰夫",
+    "Nawaf Al-Aqidi": "纳瓦夫·阿基迪",
+    "Mohammed Al-Owais": "穆罕默德·奥韦斯",
+    "Sultan Al-Ghannam": "苏丹·加南",
+    "Hassan Al-Tambakti": "哈桑·坦巴克蒂",
+    "Abdullah Madu": "阿卜杜拉·马杜",
+    "Saud Abdulhamid": "萨乌德·阿卜杜勒哈米德",
+    "Nasser Al-Dawsari": "纳赛尔·达瓦萨里",
+    "Abdulrahman Al-Jassim": "阿卜杜勒拉赫曼·贾西姆",
+    "Firas Al-Buraikan": "菲拉斯·布里坎",
+    "Saleh Al-Shehri": "萨利赫·谢赫里",
+    "Haitham Asiri": "海瑟姆·阿西里",
+    "Abdullah Al-Hamdan": "阿卜杜拉·哈姆丹",
+    "Turki Al-Ammar": "图尔基·阿马尔",
+    # Chile
+    "Alexis Sánchez": "亚历克西斯·桑切斯",
+    "Arturo Vidal": "阿图罗·比达尔",
+    "Gary Medel": "加里·梅德尔",
+    "Eduardo Vargas": "爱德华多·巴尔加斯",
+    "Claudio Bravo": "克劳迪奥·布拉沃",
+    "Charles Aránguiz": "查尔斯·阿朗吉斯",
+    "Erick Pulgar": "埃里克·普尔加",
+    "Francisco Sierralta": "弗朗西斯科·西拉尔塔",
+    "Guillermo Maripán": "吉列尔莫·马里潘",
+    "Mauricio Isla": "毛里西奥·伊斯拉",
+    "Gabriel Suazo": "加布里埃尔·苏阿索",
+    "Ben Brereton Díaz": "本·布雷雷顿·迪亚斯",
+    "Víctor Dávila": "维克托·达维拉",
+    "Diego Valdés": "迭戈·巴尔德斯",
+    "Marcelino Núñez": "马塞利诺·努涅斯",
+    "Rodrigo Echeverría": "罗德里戈·埃切韦里亚",
+    "Felipe Mora": "费利佩·莫拉",
+    "Vicente Pizarro": "维森特·皮萨罗",
+    "Thiago Bravo": "蒂亚戈·布拉沃",
+    "Cortés": "科尔特斯",
+    # Nigeria
+    "Victor Osimhen": "维克托·奥斯梅恩",
+    "Ademola Lookman": "阿德莫拉·卢克曼",
+    "Wilfred Ndidi": "威尔弗雷德·恩迪迪",
+    "Alex Iwobi": "亚历克斯·伊沃比",
+    "Samuel Chukwueze": "萨穆埃尔·丘库埃泽",
+    "Taiwo Awoniyi": "塔伊沃·阿沃尼伊",
+    "Kelechi Iheanacho": "凯莱奇·伊希纳乔",
+    "Frank Onyeka": "弗兰克·奥涅卡",
+    "Moses Simon": "摩西·西蒙",
+    "Joe Aribo": "乔·阿里博",
+    "Terem Moffi": "特雷姆·莫菲",
+    "Bright Osayi-Samuel": "布莱特·奥赛-萨缪尔",
+    "Calvin Bassey": "卡尔文·巴锡",
+    "William Troost-Ekong": "威廉·特罗斯特-埃孔",
+    "Semi Ajayi": "塞米·阿贾伊",
+    "Zaidu Sanusi": "扎伊杜·萨努西",
+    "Ola Aina": "奥拉·艾纳",
+    "Kenneth Omeruo": "肯尼斯·奥梅罗",
+    "Francis Uzoho": "弗朗西斯·乌佐霍",
+    "Raphael Onyedika": "拉斐尔·奥涅迪卡",
+    "Joshua Maja": "约书亚·马贾",
+    "Cyril Dessers": "西里尔·德塞斯",
+    # Ivory Coast
+    "Sébastien Haller": "塞巴斯蒂安·阿莱",
+    "Nicolas Pépé": "尼古拉斯·佩佩",
+    "Franck Kessié": "弗兰克·凯西",
+    "Serge Aurier": "塞尔日·奥里耶",
+    "Wilfried Zaha": "威尔弗里德·扎哈",
+    "Ibrahim Sangaré": "易卜拉欣·桑加雷",
+    "Simon Adingra": "西蒙·阿丁格拉",
+    "Hamed Traorè": "哈梅德·特拉奥雷",
+    "Seko Fofana": "塞科·福法纳",
+    "Ibrahim Diakité": "易卜拉欣·迪亚基特",
+    "Odilon Kossounou": "奥迪隆·科苏努",
+    "Willy Boly": "威利·博利",
+    "Evan Ndicka": "埃文·恩迪卡",
+    "Ghislain Konan": "吉斯兰·科南",
+    "Fofana": "福法纳",
+    "Eloi Petit": "埃洛伊·佩蒂特",
+    "Christian Kouamé": "克里斯蒂安·夸梅",
+    "Maxwel Cornet": "马克斯韦尔·科内特",
+    "Yahia Fofana": "叶海亚·福法纳",
+    "Moussa Diarra": "穆萨·迪亚拉",
+    # Turkey
+    "Hakan Çalhanoğlu": "哈坎·恰尔汗奥卢",
+    "Cengiz Ünder": "琴吉兹·云代尔",
+    "Merih Demiral": "梅里赫·德米拉尔",
+    "Çağlar Söyüncü": "恰拉尔·瑟因居",
+    "Arda Güler": "阿尔达·居莱尔",
+    "Kenan Yıldız": "凯南·伊尔迪兹",
+    "Burak Yılmaz": "布拉克·伊尔马兹",
+    "Yusuf Yazıcı": "优素福·亚泽哲",
+    "Zeki Çelik": "泽基·切利克",
+    "Mert Günok": "梅尔特·居诺克",
+    "Uğurcan Çakır": "乌古尔坎·恰克尔",
+    "Mert Müldür": "梅尔特·米尔迪尔",
+    "Abdülkerim Bardakcı": "阿卜杜勒克里姆·巴尔达克奇",
+    "Samet Akaydın": "萨梅特·阿卡伊丁",
+    "Ferdi Kadıoğlu": "费尔迪·卡德奥卢",
+    "İsmail Yüksek": "伊斯梅尔·于克塞克",
+    "Orkun Kökçü": "奥尔昆·克克曲",
+    "Salih Özcan": "萨利赫·厄兹詹",
+    "Kerem Aktürkoğlu": "凯雷姆·阿克蒂尔科奥卢",
+    "Barış Alper Yılmaz": "巴里斯·阿尔佩尔·伊尔马兹",
+    "Yunus Akgün": "尤努斯·阿克金",
+    "Enes Ünal": "埃内斯·于纳尔",
+    # Wales
+    "Gareth Bale": "加雷斯·贝尔",
+    "Aaron Ramsey": "阿隆·拉姆塞",
+    "Daniel James": "丹尼尔·詹姆斯",
+    "Joe Allen": "乔·阿伦",
+    "Harry Wilson": "哈里·威尔逊",
+    "Ben Davies": "本·戴维斯",
+    "Joe Rodon": "乔·罗登",
+    "Neco Williams": "内科·威廉姆斯",
+    "Connor Roberts": "康纳·罗伯茨",
+    "Wayne Hennessey": "韦恩·亨尼西",
+    "Kieffer Moore": "基弗·穆尔",
+    "Brennan Johnson": "布伦南·约翰逊",
+    "Ethan Ampadu": "伊森·阿姆帕杜",
+    "Sorba Thomas": "索尔巴·托马斯",
+    "Tyler Roberts": "泰勒·罗伯茨",
+    "Mark Harris": "马克·哈里斯",
+    "Matthew Smith": "马修·史密斯",
+    "Jonny Williams": "乔尼·威廉姆斯",
+    "Chris Gunter": "克里斯·冈特",
+    "Dylan Levitt": "迪伦·莱维特",
+    # Scotland
+    "Andrew Robertson": "安德鲁·罗伯逊",
+    "Scott McTominay": "斯科特·麦克托米奈",
+    "John McGinn": "约翰·麦金",
+    "Kieran Tierney": "基兰·蒂尔尼",
+    "Che Adams": "切·亚当斯",
+    "Lyndon Dykes": "林登·戴克斯",
+    "Ryan Fraser": "瑞恩·弗雷泽",
+    "Stuart Armstrong": "斯图尔特·阿姆斯特朗",
+    "Callum McGregor": "卡勒姆·麦格雷戈",
+    "Jack Hendry": "杰克·亨德利",
+    "Grant Hanley": "格兰特·汉利",
+    "Liam Cooper": "利亚姆·库珀",
+    "Aaron Hickey": "阿伦·希基",
+    "Nathan Patterson": "内森·帕特森",
+    "Stephen O'Donnell": "斯蒂芬·奥唐奈",
+    "Billy Gilmour": "比利·吉尔莫",
+    "Lewis Ferguson": "刘易斯·弗格森",
+    "Ryan Christie": "瑞恩·克里斯蒂",
+    "David Turnbull": "大卫·特恩布尔",
+    "Craig Gordon": "克雷格·戈登",
+    "Angus Gunn": "安格斯·冈恩",
+    "Zander Clark": "赞德·克拉克",
+    # Peru
+    "Paolo Guerrero": "保罗·格雷罗",
+    "Andre Carrillo": "安德雷·卡里略",
+    "Christian Cueva": "克里斯蒂安·奎瓦",
+    "Gianluca Lapadula": "詹卢卡·拉帕杜拉",
+    "Yoshimar Yotún": "约西马尔·约图恩",
+    "Renato Tapia": "雷纳托·塔皮亚",
+    "Pedro Gallese": "佩德罗·加莱塞",
+    "Luis Advíncula": "路易斯·阿德温库拉",
+    "Miguel Araujo": "米格尔·阿劳霍",
+    "Alexander Callens": "亚历山大·卡伦斯",
+    "Carlos Zambrano": "卡洛斯·桑布拉诺",
+    "Marcos López": "马科斯·洛佩斯",
+    "Aldo Corzo": "阿尔多·科尔索",
+    "Sergio Peña": "塞尔吉奥·佩尼亚",
+    "Wilder Cartagena": "威尔德·卡塔赫纳",
+    "Christofer Gonzales": "克里斯托弗·冈萨雷斯",
+    "Matías Lazo": "马蒂亚斯·拉索",
+    "Alex Valera": "亚历克斯·瓦莱拉",
+    "Santiago Ormeño": "圣地亚哥·奥尔梅尼奥",
+    "Raúl Ruidíaz": "劳尔·鲁伊迪亚斯",
 }
 
 # ISO2 country codes for flagcdn.com (flag fallback)
@@ -671,14 +1599,16 @@ class WorldCupAPI:
         }
         period_cn = period_cn_map.get(period_num, "未知时段")
         
-        if tp_id == "137":
+        if tp_id == "137" or "header" in tp_type:
             method = "头球"
         elif tp_id == "138" or "penalty" in tp_type:
             method = "点球"
-        elif tp_id == "97":
+        elif tp_id == "97" or "own" in tp_type:
             method = "乌龙球"
         elif tp_id == "140" or "free-kick" in tp_type or "free kick" in tp_type:
             method = "任意球"
+        elif "volley" in tp_type or "volley" in (tp.get("text") or "").lower():
+            method = "凌空抽射"
         elif tp_id == "70":
             method = "进球"
         else:
@@ -766,14 +1696,16 @@ class WorldCupAPI:
                 5: "点球大战",
             }
             period_cn = period_cn_map.get(period_num, "未知时段")
-            if tp_id == "137":
+            if tp_id == "137" or "header" in tp_type:
                 method = "头球"
             elif tp_id == "138" or "penalty" in tp_type:
                 method = "点球"
-            elif tp_id == "97":
+            elif tp_id == "97" or "own" in tp_type:
                 method = "乌龙球"
             elif tp_id == "140" or "free-kick" in tp_type or "free kick" in tp_type:
                 method = "任意球"
+            elif "volley" in tp_type or "volley" in (tp.get("text") or "").lower():
+                method = "凌空抽射"
             elif tp_id == "70":
                 method = "进球"
             else:
@@ -2517,15 +3449,14 @@ class MatchCard(QFrame):
                 self.penalty_row.addWidget(self.penalty_label)
                 self.penalty_row.addStretch(2)
                 main_layout.addLayout(self.penalty_row)
-        # Extra time indicator — show "⏱ 加时中" badge when in ET
+        # Extra time indicator — hidden to save space (加时 row already shown below)
         if match.status == "et":
-            self._ensure_et_badge()
-        else:
             self._hide_et_badge()
 
         # Extra time score row (post-match "加时 (X : Y)" footer).
         # Mirrors the penalty row's show/hide pattern.
-        if getattr(match, "has_extra_time", False):
+        # Hide during penalty phase to save space.
+        if getattr(match, "has_extra_time", False) and match.status not in ("pen",):
             if self.extra_time_label:
                 self.extra_time_label.setText(
                     f"加时 ({match.home_extra_time} : {match.away_extra_time})"
@@ -2550,6 +3481,13 @@ class MatchCard(QFrame):
                     self.extra_time_row.addWidget(self.extra_time_label)
                     self.extra_time_row.addStretch(2)
                     main_layout.addLayout(self.extra_time_row)
+        elif hasattr(self, 'extra_time_row') and self.extra_time_row:
+            # Hide extra time row during penalty phase or if not needed
+            for i in range(self.extra_time_row.count()):
+                w = self.extra_time_row.itemAt(i).widget()
+                if w:
+                    w.hide()
+            self.extra_time_row.setEnabled(False)
 
     def _refresh_flag(self, label: QLabel, flag_url: str):
         """Update a flag label pixmap if the URL changed or flag is now cached."""
@@ -2703,7 +3641,7 @@ class WorldCupOverlay(QWidget):
                     if time.time() - saved_at > 7200:  # 2 小时
                         self._last_pushed_score = {}
                     else:
-                        self._last_pushed_score = {k: v for k, v in lps.items()}
+                        self._last_pushed_score = {k: (v + [0, 0])[:4] if isinstance(v, list) else v for k, v in lps.items()}
                     # Debug log
                     import datetime
                     with open("/tmp/worldcup_notify.log", "a") as f:
@@ -3974,33 +4912,95 @@ class WorldCupOverlay(QWidget):
                             push_ok = False
                     # 只有推送成功后才记录（避免推送失败但记录已写入，导致下次不推）
                     if push_ok or not self._pushplus_on_start:
-                        self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
+                        self._last_pushed_score[m.match_id] = [m.home_score, m.away_score, m.home_penalty, m.away_penalty]
                         self._save_settings()
                 else:
+                    # Pad old 2-element data to 4 elements
+                    if len(last) < 4:
+                        last = last + [0, 0] * (4 - len(last))
                     prev_home, prev_away = last[0], last[1]
+                    prev_home_pen = last[2] if len(last) > 2 else 0
+                    prev_away_pen = last[3] if len(last) > 3 else 0
+
+                    # 1. Check regular score change
                     if m.home_score != prev_home or m.away_score != prev_away:
                         # 比分变化，推送
                         home_delta = m.home_score - prev_home
                         away_delta = m.away_score - prev_away
-                        self._send_notification(
-                            f"⚽ 比分变化 · {m.home_team} {m.home_score}-{m.away_score} {m.away_team}",
-                            f"比分更新：{prev_home}-{prev_away} → {m.home_score}-{m.away_score}"
-                        )
+                        # 区分进球和进球取消
+                        is_cancellation = home_delta < 0 or away_delta < 0
+                        is_new_goal = home_delta > 0 or away_delta > 0
+                        if is_cancellation and not is_new_goal:
+                            self._send_notification(
+                                f"⚠️ 进球取消 · {m.home_team} {m.home_score}-{m.away_score} {m.away_team}",
+                                f"比分回退：{prev_home}-{prev_away} → {m.home_score}-{m.away_score}"
+                            )
+                        else:
+                            self._send_notification(
+                                f"⚽ 比分变化 · {m.home_team} {m.home_score}-{m.away_score} {m.away_team}",
+                                f"比分更新：{prev_home}-{prev_away} → {m.home_score}-{m.away_score}"
+                            )
                         push_ok = True
                         if self._pushplus_on_goal:
                             t, c = self._format_goal_push(m, home_delta, away_delta)
                             if not self._send_pushplus(t, c):
                                 push_ok = False
                         if push_ok or not self._pushplus_on_goal:
-                            self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
+                            self._last_pushed_score[m.match_id] = [m.home_score, m.away_score, m.home_penalty, m.away_penalty]
+                            self._save_settings()
+
+                    # 2. Check penalty score change (点球大战)
+                    elif m.status == "pen" and (m.home_penalty != prev_home_pen or m.away_penalty != prev_away_pen):
+                        pen_delta_home = m.home_penalty - prev_home_pen
+                        pen_delta_away = m.away_penalty - prev_away_pen
+                        # Determine which team scored the penalty
+                        if pen_delta_home > 0:
+                            pen_team = m.home_team
+                        elif pen_delta_away > 0:
+                            pen_team = m.away_team
+                        else:
+                            pen_team = ""
+
+                        self._send_notification(
+                            f"🥅 点球 · {m.home_team} {m.home_penalty}-{m.away_penalty} {m.away_team}",
+                            f"点球比分更新：{prev_home_pen}-{prev_away_pen} → {m.home_penalty}-{m.away_penalty}"
+                            + (f"\n{pen_team} 命中点球" if pen_team else "")
+                        )
+                        push_ok = True
+                        if self._pushplus_on_goal:
+                            # PushPlus: title = 球队名 点球, content = 点球明细
+                            pen_title = f"{pen_team} 点球命中" if pen_team else f"{m.home_team} VS {m.away_team} 点球命中"
+                            pen_content_lines = [
+                                f"{m.home_team} {m.home_score}-{m.away_score} {m.away_team}（加时结束）",
+                                f"点球大战：{m.home_penalty} - {m.away_penalty}",
+                            ]
+                            pen_content = "<br>".join(pen_content_lines)
+                            if not self._send_pushplus(pen_title, pen_content):
+                                push_ok = False
+                        if push_ok or not self._pushplus_on_goal:
+                            self._last_pushed_score[m.match_id] = [m.home_score, m.away_score, m.home_penalty, m.away_penalty]
                             self._save_settings()
 
             elif m.status == "finished":
                 # 比赛结束，推送（如果之前没推送过结束通知）
                 if m.match_id not in self._end_pushed:
+                    # macOS 通知：有点球时显示点球结果
+                    has_pen = getattr(m, "has_penalties", False)
+                    if has_pen:
+                        if m.home_penalty > m.away_penalty:
+                            end_title = f"🏆 {m.home_team} 获胜 {m.home_penalty}:{m.away_penalty}（点球）"
+                        else:
+                            end_title = f"🏆 {m.away_team} 获胜 {m.home_penalty}:{m.away_penalty}（点球）"
+                        end_msg = f"点球大战：{m.home_penalty} - {m.away_penalty}"
+                        if getattr(m, "has_extra_time", False):
+                            end_msg += f" · 加时：{m.home_extra_time}-{m.away_extra_time}"
+                        end_msg += f" · 常规：{m.home_score}-{m.away_score}"
+                    else:
+                        end_title = f"🏁 {m.home_team} VS {m.away_team} 比赛结束"
+                        end_msg = f"最终比分：{m.home_score} - {m.away_score} · 全场比赛结束"
                     self._send_notification(
-                        f"🏁 比赛结束 · {m.home_team} vs {m.away_team}",
-                        f"最终比分：{m.home_score} - {m.away_score} · 全场比赛结束"
+                        end_title,
+                        end_msg
                     )
                     push_ok = True
                     if self._pushplus_on_start:
@@ -4009,7 +5009,7 @@ class WorldCupOverlay(QWidget):
                             push_ok = False
                     if push_ok or not self._pushplus_on_start:
                         self._end_pushed.add(m.match_id)
-                        self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
+                        self._last_pushed_score[m.match_id] = [m.home_score, m.away_score, m.home_penalty, m.away_penalty]
                         self._save_settings()
 
             # ---- 半场 / 阶段结束推送 ----
@@ -4239,11 +5239,30 @@ class WorldCupOverlay(QWidget):
                     pass
             content = "<br>".join(lines)
         elif kind == "end":
-            title = f"{m.home_team} VS {m.away_team} 比赛结束"
-            lines = [
-                f"最终比分：{m.home_score} - {m.away_score}",
-                "全场比赛结束 🏁",
-            ]
+            # 有点球时，显示点球结果和胜者
+            has_pen = getattr(m, "has_penalties", False)
+            if has_pen:
+                # 点球大战结束：谁胜 + 点球比分
+                if m.home_penalty > m.away_penalty:
+                    title = f"{m.home_team}胜利 {m.home_penalty}:{m.away_penalty}（点球）"
+                    winner = m.home_team
+                else:
+                    title = f"{m.away_team}胜利 {m.home_penalty}:{m.away_penalty}（点球）"
+                    winner = m.away_team
+                lines = [
+                    f"点球大战：{m.home_penalty} - {m.away_penalty}",
+                    f"🏆 {winner} 获胜",
+                ]
+                # 有加时赛时显示加时比分
+                if getattr(m, "has_extra_time", False):
+                    lines.append(f"加时比分：{m.home_extra_time} - {m.away_extra_time}")
+                lines.append(f"常规比分：{m.home_score} - {m.away_score}")
+            else:
+                title = f"{m.home_team} VS {m.away_team} {m.home_score}:{m.away_score}"
+                lines = [
+                    f"最终比分：{m.home_score} - {m.away_score}",
+                    "全场比赛结束 🏁",
+                ]
             # 比赛结束时也包含进球明细
             if (m.home_score > 0 or m.away_score > 0) and hasattr(self, 'api'):
                 try:
@@ -4370,6 +5389,49 @@ class WorldCupOverlay(QWidget):
         unreachable. content may be "" only if BOTH the summary
         call failed AND no goals are known.
         """
+        # 检测是否为进球取消（比分下降）
+        has_cancellation = home_delta < 0 or away_delta < 0
+        has_new_goal = home_delta > 0 or away_delta > 0
+
+        if has_cancellation and not has_new_goal:
+            # 纯进球取消（VAR取消进球等）
+            cancelled_teams = []
+            if home_delta < 0:
+                cancelled_teams.append(m.home_team)
+            if away_delta < 0:
+                cancelled_teams.append(m.away_team)
+            cancelled_str = "、".join(cancelled_teams)
+
+            title = f"⚠️ {cancelled_str} 进球取消"
+
+            br = "<br>"
+            prev_home = m.home_score - home_delta
+            prev_away = m.away_score - away_delta
+            lines = [
+                f"{m.home_team} {m.home_score}-{m.away_score} {m.away_team}",
+                f"⚠️ {cancelled_str}一粒进球已被取消（原比分 {prev_home}-{prev_away} → {m.home_score}-{m.away_score}）",
+            ]
+            # 获取当前剩余进球明细
+            try:
+                summary = self.api.fetch_match_summary(m.match_id)
+                all_goals = self.api.extract_all_goals_from_summary(summary, m)
+            except Exception:
+                all_goals = []
+            if all_goals:
+                lines.append("剩余进球明细：")
+                for g in all_goals:
+                    g_team = f"（{g['team_cn']}）" if g.get('team_cn') else ""
+                    g_minute = g.get('minute', '')
+                    period_cn = g.get('period_cn', '')
+                    lines.append(
+                        f"  {period_cn} {g_minute} {g['scorer']}{g_team} {g['method']}  {g['score']}"
+                    )
+            else:
+                lines.append("（进球明细获取失败）")
+            content = br.join(lines)
+            return title, content
+
+        # 以下为正常进球（或混合情况）逻辑
         scorer = "未知球员"
         scorer_en = ""
         method = "进球"
@@ -4400,9 +5462,9 @@ class WorldCupOverlay(QWidget):
         else:
             #  fallback：如果无法获取球队名，使用原来的格式
             if minute and minute not in ("0'", "0''"):
-                title = f"⚽ {minute} {scorer}{head_team} {method}  {score_str}"
+                title = f"⚽ {minute} {scorer} {method}  {score_str}"
             else:
-                title = f"⚽ {scorer}{head_team} {method}  {score_str}"
+                title = f"⚽ {scorer} {method}  {score_str}"
 
         # --- Content: full goal log for this match ---
         # Use <br> for line breaks (WeChat renders HTML in PushPlus content).
@@ -4415,6 +5477,20 @@ class WorldCupOverlay(QWidget):
                 period_cn = g.get('period_cn', '')
                 lines.append(
                     f"  {period_cn} {g_minute} {g['scorer']}{g_team} {g['method']}  {g['score']}"
+                )
+            # 混合情况：既有进球又有取消，加取消提示
+            if has_cancellation:
+                cancelled_teams = []
+                if home_delta < 0:
+                    cancelled_teams.append(m.home_team)
+                if away_delta < 0:
+                    cancelled_teams.append(m.away_team)
+                cancelled_str = "、".join(cancelled_teams)
+                prev_home = m.home_score - home_delta
+                prev_away = m.away_score - away_delta
+                lines.append(
+                    f"⚠️ 注：{cancelled_str}一粒进球已被取消"
+                    f"（原比分 {prev_home}-{prev_away} → {m.home_score}-{m.away_score}）"
                 )
             content = br.join(lines)
         else:
