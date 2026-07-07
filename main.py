@@ -2603,6 +2603,9 @@ class WorldCupOverlay(QWidget):
         # Session-only: _end_pushed prevents duplicate "match end" notifications
         # within the same app session.
         self._end_pushed = set()  # set of match_id strings (match end notifications)
+        self._ht_pushed = set()  # 半场结束已推送
+        self._reg_end_pushed = set()  # 常规时间结束（进入加时前）已推送
+        self._et_end_pushed = set()  # 加时赛结束（进入点球前）已推送
         self._last_pushed_score = {}  # match_id -> [home_score, away_score]
         self._user_navigated = False  # True if user manually changed date
         # Per-match goal log for goal-detail pushes:
@@ -2688,6 +2691,10 @@ class WorldCupOverlay(QWidget):
                     # Load end_pushed set (match end notifications)
                     end_pushed = data.get("end_pushed_ids", [])
                     self._end_pushed = set(end_pushed)
+                    # Load half-time / phase transition pushed sets
+                    self._ht_pushed = set(data.get("ht_pushed_ids", []))
+                    self._reg_end_pushed = set(data.get("reg_end_pushed_ids", []))
+                    self._et_end_pushed = set(data.get("et_end_pushed_ids", []))
                     # Load last_pushed_score: match_id -> [home, away]
                     # 如果数据太旧（超过 2 小时），清空（避免推送过期数据）
                     lps = data.get("last_pushed_score", {})
@@ -2789,6 +2796,9 @@ class WorldCupOverlay(QWidget):
                     "pushplus_on_start": getattr(self, "_pushplus_on_start", False),
                     "pushplus_on_goal": getattr(self, "_pushplus_on_goal", False),
                     "end_pushed_ids": list(self._end_pushed),
+                    "ht_pushed_ids": list(self._ht_pushed),
+                    "reg_end_pushed_ids": list(self._reg_end_pushed),
+                    "et_end_pushed_ids": list(self._et_end_pushed),
                     "last_pushed_score": self._last_pushed_score,
                     "saved_at": time.time(),  # 用于判断数据是否过期
                 }, f, indent=2)
@@ -3200,6 +3210,9 @@ class WorldCupOverlay(QWidget):
             # Clear push state for old matches to avoid stale
             # "比赛结束" pushes on app restart
             self._end_pushed.clear()
+            self._ht_pushed.clear()
+            self._reg_end_pushed.clear()
+            self._et_end_pushed.clear()
             self._last_pushed_score.clear()
             # If we were viewing yesterday/older, jump back to today on rollover
             if self.current_date != today:
@@ -3999,6 +4012,114 @@ class WorldCupOverlay(QWidget):
                         self._last_pushed_score[m.match_id] = [m.home_score, m.away_score]
                         self._save_settings()
 
+            # ---- 半场 / 阶段结束推送 ----
+            prev_state = self._prev_matches_state.get(m.match_id)
+            prev_status = prev_state[0] if prev_state else None
+
+            # 1. 半场结束（status == "ht"）
+            if m.status == "ht" and m.match_id not in self._ht_pushed:
+                self._send_notification(
+                    f"⏸ 半场结束 · {m.home_team} vs {m.away_team}",
+                    f"半场比分：{m.home_score} - {m.away_score}"
+                )
+                push_ok = True
+                if self._pushplus_on_start:
+                    t = f"{m.home_team} VS {m.away_team} 半场结束"
+                    c_lines = [f"半场比分：{m.home_score} - {m.away_score}"]
+                    if (m.home_score > 0 or m.away_score > 0) and hasattr(self, 'api'):
+                        try:
+                            summary = self.api.fetch_match_summary(m.match_id)
+                            if summary:
+                                all_goals = self.api.extract_all_goals_from_summary(summary, m)
+                                if all_goals:
+                                    c_lines.append("进球明细：")
+                                for g in all_goals:
+                                    g_team = f"（{g['team_cn']}）" if g.get('team_cn') else ""
+                                    period_cn = g.get('period_cn', '')
+                                    c_lines.append(
+                                        f"  {period_cn} {g['minute']} {g['scorer']}{g_team} {g['method']}  {g['score']}"
+                                    )
+                        except Exception:
+                            pass
+                    c = "<br>".join(c_lines)
+                    if not self._send_pushplus(t, c):
+                        push_ok = False
+                if push_ok or not self._pushplus_on_start:
+                    self._ht_pushed.add(m.match_id)
+                    self._save_settings()
+
+            # 2. 常规时间结束 → 进入加时（2h → et）
+            if (prev_status == "2h" and m.status == "et"
+                    and m.match_id not in self._reg_end_pushed):
+                self._send_notification(
+                    f"⏱ 常规时间结束 · {m.home_team} vs {m.away_team}",
+                    f"常规时间比分：{m.home_score} - {m.away_score} · 进入加时赛"
+                )
+                push_ok = True
+                if self._pushplus_on_start:
+                    t = f"{m.home_team} VS {m.away_team} 常规时间结束"
+                    c_lines = [
+                        f"常规时间比分：{m.home_score} - {m.away_score}",
+                        "进入加时赛 ⚡",
+                    ]
+                    if (m.home_score > 0 or m.away_score > 0) and hasattr(self, 'api'):
+                        try:
+                            summary = self.api.fetch_match_summary(m.match_id)
+                            if summary:
+                                all_goals = self.api.extract_all_goals_from_summary(summary, m)
+                                if all_goals:
+                                    c_lines.append("进球明细：")
+                                for g in all_goals:
+                                    g_team = f"（{g['team_cn']}）" if g.get('team_cn') else ""
+                                    period_cn = g.get('period_cn', '')
+                                    c_lines.append(
+                                        f"  {period_cn} {g['minute']} {g['scorer']}{g_team} {g['method']}  {g['score']}"
+                                    )
+                        except Exception:
+                            pass
+                    c = "<br>".join(c_lines)
+                    if not self._send_pushplus(t, c):
+                        push_ok = False
+                if push_ok or not self._pushplus_on_start:
+                    self._reg_end_pushed.add(m.match_id)
+                    self._save_settings()
+
+            # 3. 加时赛结束 → 进入点球（et → pen）
+            if (prev_status == "et" and m.status == "pen"
+                    and m.match_id not in self._et_end_pushed):
+                self._send_notification(
+                    f"⏱ 加时赛结束 · {m.home_team} vs {m.away_team}",
+                    f"加时比分：{m.home_score} - {m.away_score} · 进入点球大战"
+                )
+                push_ok = True
+                if self._pushplus_on_start:
+                    t = f"{m.home_team} VS {m.away_team} 加时赛结束"
+                    c_lines = [
+                        f"加时比分：{m.home_score} - {m.away_score}",
+                        "进入点球大战 ⚽",
+                    ]
+                    if (m.home_score > 0 or m.away_score > 0) and hasattr(self, 'api'):
+                        try:
+                            summary = self.api.fetch_match_summary(m.match_id)
+                            if summary:
+                                all_goals = self.api.extract_all_goals_from_summary(summary, m)
+                                if all_goals:
+                                    c_lines.append("进球明细：")
+                                for g in all_goals:
+                                    g_team = f"（{g['team_cn']}）" if g.get('team_cn') else ""
+                                    period_cn = g.get('period_cn', '')
+                                    c_lines.append(
+                                        f"  {period_cn} {g['minute']} {g['scorer']}{g_team} {g['method']}  {g['score']}"
+                                    )
+                        except Exception:
+                            pass
+                    c = "<br>".join(c_lines)
+                    if not self._send_pushplus(t, c):
+                        push_ok = False
+                if push_ok or not self._pushplus_on_start:
+                    self._et_end_pushed.add(m.match_id)
+                    self._save_settings()
+
         # 更新 prev 状态，供下次 fetch 对比
         self._prev_matches_state = {
             m.match_id: (m.status, m.home_score, m.away_score)
@@ -4291,8 +4412,9 @@ class WorldCupOverlay(QWidget):
             for g in all_goals:
                 g_team = f"（{g['team_cn']}）" if g.get('team_cn') else ""
                 g_minute = g.get('minute', '')
+                period_cn = g.get('period_cn', '')
                 lines.append(
-                    f"  {g_minute} {g['scorer']}{g_team} {g['method']}  {g['score']}"
+                    f"  {period_cn} {g_minute} {g['scorer']}{g_team} {g['method']}  {g['score']}"
                 )
             content = br.join(lines)
         else:
