@@ -12,6 +12,7 @@ import os
 import json
 import time
 import subprocess
+import traceback
 import requests
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, asdict
@@ -1224,9 +1225,12 @@ class FlagLoader(QObject):
         return None
 
     def _on_flag_downloaded(self, url: str, pixmap: QPixmap):
-        if not pixmap.isNull():
-            self._cache[url] = pixmap
-            self.flag_ready.emit(url)
+        try:
+            if not pixmap.isNull():
+                self._cache[url] = pixmap
+                self.flag_ready.emit(url)
+        except Exception:
+            pass
 
     def _cleanup_worker(self, worker: FlagDownloadWorker):
         if worker in self._workers:
@@ -2173,24 +2177,26 @@ class MatchCard(QFrame):
         self.home_score_label = QLabel(f" {self.match.home_score} ")
         self.home_score_label.setAlignment(Qt.AlignCenter)
         self.home_score_label.setStyleSheet("""
-            font-size: 22px; color: #ffffff; font-weight: 900;
+            font-size: 34px; color: #ffffff; font-weight: 900;
             background-color: rgba(50,50,65,0.8);
-            border-radius: 8px; padding: 3px 8px;
+            border-radius: 8px; padding: 0px 12px;
+            margin-top: -8px;
         """)
         score_layout.addWidget(self.home_score_label)
 
         colon = QLabel(":")
         colon.setAlignment(Qt.AlignCenter)
-        colon.setStyleSheet("font-size: 18px; color: #8080a0; font-weight: bold;")
+        colon.setStyleSheet("font-size: 28px; color: #8080a0; font-weight: bold; margin-top: -6px;")
         colon.setFixedWidth(16)
         score_layout.addWidget(colon)
 
         self.away_score_label = QLabel(f" {self.match.away_score} ")
         self.away_score_label.setAlignment(Qt.AlignCenter)
         self.away_score_label.setStyleSheet("""
-            font-size: 22px; color: #ffffff; font-weight: 900;
+            font-size: 34px; color: #ffffff; font-weight: 900;
             background-color: rgba(50,50,65,0.8);
-            border-radius: 8px; padding: 3px 8px;
+            border-radius: 8px; padding: 0px 12px;
+            margin-top: -8px;
         """)
         score_layout.addWidget(self.away_score_label)
 
@@ -2333,6 +2339,12 @@ class MatchCard(QFrame):
                 self.status_label.setText(new_text)
 
     def _on_flag_ready(self, url: str):
+        try:
+            self._on_flag_ready_impl(url)
+        except Exception:
+            pass  # flag display errors are non-critical, silently ignore
+
+    def _on_flag_ready_impl(self, url: str):
         """Called when a flag finishes downloading."""
         # Guard: card may be hidden/awaiting async deletion — ignore stale signals
         if self.isHidden():
@@ -3163,6 +3175,12 @@ class WorldCupOverlay(QWidget):
         show up. The previous behaviour of "future dates refresh every
         1 minute" is now superseded by the bulk cache.
         """
+        try:
+            self._on_timer_tick_impl()
+        except Exception:
+            print(f"[WorldCupOverlay] Error in _on_timer_tick (prevented crash):\n{traceback.format_exc()}", file=sys.stderr)
+
+    def _on_timer_tick_impl(self):
         today = get_beijing_today()
         cmp = compare_beijing_dates(self.current_date, today)
 
@@ -3307,11 +3325,14 @@ class WorldCupOverlay(QWidget):
 
     def _update_countdowns(self):
         """Update countdown text on all visible cards."""
-        if self._is_hidden:
-            return
-        for card in self.card_widgets:
-            if hasattr(card, 'update_countdown'):
-                card.update_countdown()
+        try:
+            if self._is_hidden:
+                return
+            for card in self.card_widgets:
+                if hasattr(card, 'update_countdown'):
+                    card.update_countdown()
+        except Exception:
+            print(f"[WorldCupOverlay] Error in _update_countdowns (prevented crash):\n{traceback.format_exc()}", file=sys.stderr)
 
     # ---- Date helpers ----
 
@@ -3640,6 +3661,18 @@ class WorldCupOverlay(QWidget):
         Also persists the fresh cache to disk so the next app
         launch can serve today's view without waiting for ESPN.
         """
+        try:
+            self._on_bulk_ready_impl(by_date)
+        except Exception as e:
+            tb = traceback.format_exc()
+            print(f"[WorldCupOverlay] Error in _on_bulk_ready (prevented crash):\n{tb}", file=sys.stderr)
+            # Don't leave app stuck — mark bulk as loaded so _refresh_data stops waiting
+            self._bulk_loaded = True
+            # Try to refresh from whatever partial data we have
+            if self.current_date in self._bulk_cache or not self._has_ever_loaded:
+                self._refresh_data()
+
+    def _on_bulk_ready_impl(self, by_date: dict):
         for bj_date, matches in by_date.items():
             # Enrich ET scores for AET matches (same as the
             # per-date path does)
@@ -3668,6 +3701,17 @@ class WorldCupOverlay(QWidget):
         pass
 
     def _on_data_ready(self, matches: list, date_str: str, success: bool):
+        try:
+            self._on_data_ready_impl(matches, date_str, success)
+        except Exception as e:
+            tb = traceback.format_exc()
+            print(f"[WorldCupOverlay] Error in _on_data_ready (prevented crash):\n{tb}", file=sys.stderr)
+            # Don't leave UI stuck — treat as fetch failure so retry logic kicks in
+            self._is_refreshing = False
+            self._fetch_worker = None
+            self._on_data_ready_impl([], date_str, False)
+
+    def _on_data_ready_impl(self, matches: list, date_str: str, success: bool):
         if date_str != self.current_date:
             return
 
@@ -3740,7 +3784,7 @@ class WorldCupOverlay(QWidget):
                 )
             else:
                 self.status_bar.setText(
-                    f"加载失败，{self._retry_countdown_remaining}秒后第{self._retry_count}次重试..."
+                    f"加载失败，5秒后第{self._retry_count}次重试..."
                 )
             self._start_retry_countdown()
         elif not success:
@@ -3763,21 +3807,24 @@ class WorldCupOverlay(QWidget):
 
     def _update_retry_countdown(self):
         """Update status bar with remaining seconds. Retry when reaches 0."""
-        self._retry_countdown_remaining -= 1
-        if self._retry_countdown_remaining <= 0:
-            if self._retry_countdown_timer:
-                self._retry_countdown_timer.stop()
-                self._retry_countdown_timer = None
-            self._retry_fetch()
-            return
-        if self.matches:
-            self.status_bar.setText(
-                f"⏳ 等待API恢复，第{self._retry_count}次重试 ({self._retry_countdown_remaining}s)..."
-            )
-        else:
-            self.status_bar.setText(
-                f"加载失败，{self._retry_countdown_remaining}秒后第{self._retry_count}次重试..."
-            )
+        try:
+            self._retry_countdown_remaining -= 1
+            if self._retry_countdown_remaining <= 0:
+                if self._retry_countdown_timer:
+                    self._retry_countdown_timer.stop()
+                    self._retry_countdown_timer = None
+                self._retry_fetch()
+                return
+            if self.matches:
+                self.status_bar.setText(
+                    f"⏳ 等待API恢复，第{self._retry_count}次重试 ({self._retry_countdown_remaining}s)..."
+                )
+            else:
+                self.status_bar.setText(
+                    f"加载失败，{self._retry_countdown_remaining}秒后第{self._retry_count}次重试..."
+                )
+        except Exception:
+            print(f"[WorldCupOverlay] Error in _update_retry_countdown (prevented crash):\n{traceback.format_exc()}", file=sys.stderr)
 
     def _retry_fetch(self):
         # Force-bypass the rate limit window. The user just clicked
@@ -3792,12 +3839,15 @@ class WorldCupOverlay(QWidget):
 
     def _on_fetch_finished(self):
         """Called when FetchWorker thread finishes."""
-        self._is_refreshing = False
-        self._fetch_worker = None
-        if self._pending_refresh and not self._is_refreshing:
-            self._pending_refresh = False
-            # Use QTimer.singleShot to avoid re-entering during signal handling
-            QTimer.singleShot(200, self._refresh_data)
+        try:
+            self._is_refreshing = False
+            self._fetch_worker = None
+            if self._pending_refresh and not self._is_refreshing:
+                self._pending_refresh = False
+                # Use QTimer.singleShot to avoid re-entering during signal handling
+                QTimer.singleShot(200, self._refresh_data)
+        except Exception:
+            print(f"[WorldCupOverlay] Error in _on_fetch_finished (prevented crash):\n{traceback.format_exc()}", file=sys.stderr)
 
     def _force_refresh(self):
         """Force refresh data from network (with cooldown check).
@@ -3816,19 +3866,22 @@ class WorldCupOverlay(QWidget):
 
     def _update_cooldown(self):
         """Update the cooldown countdown in status bar every second."""
-        if not hasattr(self, '_cooldown_remaining'):
-            return
-        
-        self._cooldown_remaining -= 1
-        if self._cooldown_remaining <= 0:
-            # Cooldown ended, stop timer and restore status
-            if hasattr(self, '_cooldown_timer') and self._cooldown_timer:
-                self._cooldown_timer.stop()
-                self._cooldown_timer = None
-            self._update_status()
-        else:
-            # Update countdown display
-            self.status_bar.setText(f"⏳ 刷新过于频繁，请等待 {self._cooldown_remaining} 秒")
+        try:
+            if not hasattr(self, '_cooldown_remaining'):
+                return
+
+            self._cooldown_remaining -= 1
+            if self._cooldown_remaining <= 0:
+                # Cooldown ended, stop timer and restore status
+                if hasattr(self, '_cooldown_timer') and self._cooldown_timer:
+                    self._cooldown_timer.stop()
+                    self._cooldown_timer = None
+                self._update_status()
+            else:
+                # Update countdown display
+                self.status_bar.setText(f"⏳ 刷新过于频繁，请等待 {self._cooldown_remaining} 秒")
+        except Exception:
+            print(f"[WorldCupOverlay] Error in _update_cooldown (prevented crash):\n{traceback.format_exc()}", file=sys.stderr)
 
     # ---- Notifications ----
 
@@ -3855,6 +3908,20 @@ class WorldCupOverlay(QWidget):
             return f"加时 {minute_raw}" if minute_raw else "加时赛"
         return f"{stage} {minute_raw}" if minute_raw else stage
 
+    def _parse_minute(self, minute_str) -> int:
+        """Parse a minute string like "27'", "45+2'", "HT" into an int.
+        Returns 999 if parsing fails (treated as 'not early in match')."""
+        if not minute_str:
+            return 999
+        s = str(minute_str).strip().rstrip("'")
+        # Handle "45+2" format — take the base part before '+'
+        if "+" in s:
+            s = s.split("+")[0]
+        try:
+            return int(s)
+        except (ValueError, TypeError):
+            return 999
+
     def _check_notifications(self, new_matches: list):
         """Send macOS + PushPlus notifications for match events.
 
@@ -3878,7 +3945,7 @@ class WorldCupOverlay(QWidget):
                 if last is None:
                     # 第一次推这场比赛
                     status_disp = self._status_display(m)
-                    if m.home_score == 0 and m.away_score == 0 and (not m.minute or m.minute <= 10):
+                    if m.home_score == 0 and m.away_score == 0 and (not m.minute or self._parse_minute(m.minute) <= 10):
                         title = f"⚽ 比赛开始 · {m.home_team} vs {m.away_team}"
                         body = f"已开赛 {m.minute or '?'}分钟 · 当前比分：{m.home_score}-{m.away_score}"
                     else:
@@ -4022,7 +4089,7 @@ class WorldCupOverlay(QWidget):
 
         if kind == "start":
             # 如果比分不是0-0，说明比赛已进行一段时间，不写"比赛开始"
-            if m.home_score == 0 and m.away_score == 0 and (not m.minute or m.minute <= 10):
+            if m.home_score == 0 and m.away_score == 0 and (not m.minute or self._parse_minute(m.minute) <= 10):
                 title = f"{m.home_team} VS {m.away_team} 比赛开始"
             else:
                 status_disp = self._status_display(m)
@@ -4205,15 +4272,16 @@ class WorldCupOverlay(QWidget):
             pass
 
         # --- Title: last goal, one line ---
+        # 用户要求：标题写 "队伍 头球 进球" 这样的格式（球队名 + 进球方式）
+        # 开局和结束推送的标题保持不变，只有进球推送改用此格式
         if team_cn:
-            head_team = f"（{team_cn}）"
+            title = f"{team_cn} {method}"
         else:
-            head_team = ""
-
-        if minute and minute not in ("0'", "0''"):
-            title = f"⚽ {minute} {scorer}{head_team} {method}  {score_str}"
-        else:
-            title = f"⚽ {scorer}{head_team} {method}  {score_str}"
+            #  fallback：如果无法获取球队名，使用原来的格式
+            if minute and minute not in ("0'", "0''"):
+                title = f"⚽ {minute} {scorer}{head_team} {method}  {score_str}"
+            else:
+                title = f"⚽ {scorer}{head_team} {method}  {score_str}"
 
         # --- Content: full goal log for this match ---
         # Use <br> for line breaks (WeChat renders HTML in PushPlus content).
@@ -4429,7 +4497,7 @@ class WorldCupOverlay(QWidget):
 
         self.matches_layout.addStretch()
         self.scroll_area.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self._update_height(44 + 24 + 130 + 8 + 28)
+        self._update_height(44 + 24 + 140 + 8 + 28)
 
     def _update_height(self, height: int):
         self.resize(WINDOW_WIDTH, height)
@@ -4872,6 +4940,23 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("WorldCup 2026 Overlay")
     app.setOrganizationName("worldcup-overlay")
+
+    # --- Global exception hook: prevent PyQt5 abort() on unhandled slot errors ---
+    def _global_excepthook(exc_type, exc_value, exc_tb):
+        """Catch unhandled exceptions in Qt slots to prevent SIGABRT crash."""
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_tb)
+            return
+        tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        try:
+            log_path = os.path.join(os.path.expanduser("~"), ".worldcup_overlay", "error.log")
+            with open(log_path, "a") as f:
+                f.write(f"\n[{datetime.now().isoformat()}] Unhandled exception:\n{tb_str}\n")
+        except Exception:
+            pass
+        print(f"[WorldCupOverlay] Unhandled exception caught (prevented crash):\n{tb_str}", file=sys.stderr)
+
+    sys.excepthook = _global_excepthook
 
     font = QFont("Helvetica Neue", 12)
     font.setStyleStrategy(QFont.PreferAntialias)

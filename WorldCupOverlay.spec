@@ -3,7 +3,7 @@
 
 a = Analysis(
     ['main.py'],
-    pathex=['/Users/fish/WorkBuddy/2026-07-03-16-00-57/worldcup_overlay'],
+    pathex=['.'],
     binaries=[],
     datas=[],
     hiddenimports=[],
