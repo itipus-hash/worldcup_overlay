@@ -1957,7 +1957,8 @@ class WorldCupAPI:
         # fill them in if a summary becomes available.
         home_et = 0
         away_et = 0
-        has_et = ("加时" in status_text) or (status_key == "et")
+        # 点球大战必然经过了加时赛
+        has_et = ("加时" in status_text) or (status_key == "et") or has_pen
 
         # Date/time -> Beijing. Use competition.startDate (always
         # populated) or event.date as fallback.
@@ -5239,10 +5240,31 @@ class WorldCupOverlay(QWidget):
                     pass
             content = "<br>".join(lines)
         elif kind == "end":
-            # 有点球时，显示点球结果和胜者
+            # 先获取进球明细，用于计算半场比分和显示
+            all_goals = []
+            if (m.home_score > 0 or m.away_score > 0) and hasattr(self, 'api'):
+                try:
+                    summary = self.api.fetch_match_summary(m.match_id)
+                    if summary:
+                        all_goals = self.api.extract_all_goals_from_summary(summary, m)
+                except Exception:
+                    pass
+
+            # 从进球明细计算半场比分（period 1 的进球）
+            ht_home = 0
+            ht_away = 0
+            for g in all_goals:
+                if g.get('period_cn') == '上半场':
+                    if g.get('team_cn') == m.home_team:
+                        ht_home += 1
+                    elif g.get('team_cn') == m.away_team:
+                        ht_away += 1
+
+            # 按比赛进度排列：半场 → 加时（如有）→ 点球（如有）→ 全场
             has_pen = getattr(m, "has_penalties", False)
+            has_et = getattr(m, "has_extra_time", False)
+
             if has_pen:
-                # 点球大战结束：谁胜 + 点球比分
                 if m.home_penalty > m.away_penalty:
                     title = f"{m.home_team}胜利 {m.home_penalty}:{m.away_penalty}（点球）"
                     winner = m.home_team
@@ -5250,36 +5272,31 @@ class WorldCupOverlay(QWidget):
                     title = f"{m.away_team}胜利 {m.home_penalty}:{m.away_penalty}（点球）"
                     winner = m.away_team
                 lines = [
-                    f"点球大战：{m.home_penalty} - {m.away_penalty}",
-                    f"🏆 {winner} 获胜",
+                    f"半场比分：{ht_home} - {ht_away}",
                 ]
-                # 有加时赛时显示加时比分
-                if getattr(m, "has_extra_time", False):
+                if has_et:
                     lines.append(f"加时比分：{m.home_extra_time} - {m.away_extra_time}")
-                lines.append(f"常规比分：{m.home_score} - {m.away_score}")
+                lines.append(f"点球大战：{m.home_penalty} - {m.away_penalty}")
+                lines.append(f"🏆 {winner} 获胜")
+                lines.append(f"全场比分：{m.home_score} - {m.away_score}")
             else:
                 title = f"{m.home_team} VS {m.away_team} {m.home_score}:{m.away_score}"
                 lines = [
-                    f"最终比分：{m.home_score} - {m.away_score}",
-                    "全场比赛结束 🏁",
+                    f"半场比分：{ht_home} - {ht_away}",
                 ]
-            # 比赛结束时也包含进球明细
-            if (m.home_score > 0 or m.away_score > 0) and hasattr(self, 'api'):
-                try:
-                    summary = self.api.fetch_match_summary(m.match_id)
-                    if summary:
-                        all_goals = self.api.extract_all_goals_from_summary(summary, m)
-                        if all_goals:
-                            lines.append("进球明细：")
-                        for g in all_goals:
-                            g_team = f"（{g['team_cn']}）" if g.get('team_cn') else ""
-                            # 显示格式：比赛阶段 + 时间 + 球员 + 方式 + 比分
-                            period_cn = g.get('period_cn', '')
-                            lines.append(
-                                f"  {period_cn} {g['minute']} {g['scorer']}{g_team} {g['method']}  {g['score']}"
-                            )
-                except Exception:
-                    pass
+                if has_et:
+                    lines.append(f"加时比分：{m.home_extra_time} - {m.away_extra_time}")
+                lines.append(f"全场比分：{m.home_score} - {m.away_score}")
+                lines.append("全场比赛结束 🏁")
+            # 进球明细
+            if all_goals:
+                lines.append("进球明细：")
+                for g in all_goals:
+                    g_team = f"（{g['team_cn']}）" if g.get('team_cn') else ""
+                    period_cn = g.get('period_cn', '')
+                    lines.append(
+                        f"  {period_cn} {g['minute']} {g['scorer']}{g_team} {g['method']}  {g['score']}"
+                    )
             content = "<br>".join(lines)
         elif kind == "live_catchup":
             # First-load catch-up: match is already live with goals
